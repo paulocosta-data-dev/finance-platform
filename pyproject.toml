@@ -1,0 +1,5 @@
+[project]
+name = "finance-platform"
+version = "0.1.0"
+description = "Local-first financial management platform"
+requires-python = ">=3.13"

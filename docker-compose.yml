@@ -1,0 +1,12 @@
+services:
+  finance-app:
+    build: .
+
+    container_name: finance-app
+
+    volumes:
+      - .:/app
+
+    working_dir: /app
+
+    tty: true
