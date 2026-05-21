@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -8,6 +6,14 @@ class RuleMatchConditions(
 ):
 
     description_contains: (
+        list[str]
+    ) = []
+
+    description_startswith: (
+        list[str]
+    ) = []
+
+    description_regex: (
         list[str]
     ) = []
 

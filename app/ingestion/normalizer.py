@@ -1,6 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
 
+from app.category.services.category_engine import (
+    detect_category,
+)
 from app.domain.enums import DirectionEnum
 from app.domain.enums import (
     ResolutionStatusEnum,
@@ -97,6 +100,7 @@ def normalize_raw_transaction(
         currency="EUR",
         direction=direction,
         semantic_type_id="UNKNOWN",
+        category_id="uncategorized",
         matched_rule_id=None,
         semantic_confidence=0.0,
         resolution_status=(
@@ -111,6 +115,15 @@ def normalize_raw_transaction(
         detect_semantic_match(
             transaction=temp_transaction
         )
+    )
+
+    temp_transaction.semantic_type_id = (
+        semantic_match
+        .semantic_type_id
+    )
+
+    category_id = detect_category(
+        temp_transaction
     )
 
     semantic_type = get_semantic_type(
@@ -162,6 +175,7 @@ def normalize_raw_transaction(
             semantic_match
             .semantic_type_id
         ),
+        category_id=category_id,
         matched_rule_id=(
             semantic_match
             .matched_rule_id

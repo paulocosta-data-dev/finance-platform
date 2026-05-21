@@ -1,5 +1,74 @@
 rules:
 
+  - rule_id: interest_payment
+
+    enabled: true
+
+    priority: 130
+
+    semantic_type_id: INTEREST_PAYMENT
+
+    confidence: 0.99
+
+    match:
+
+      description_contains:
+        - juros
+
+      direction:
+        - CREDIT
+
+  - rule_id: term_deposit
+
+    enabled: true
+
+    priority: 120
+
+    semantic_type_id: INTERNAL_TRANSFER
+
+    confidence: 0.99
+
+    match:
+
+      description_contains:
+        - dep prazo
+
+  - rule_id: atm_withdrawal
+
+    enabled: true
+
+    priority: 120
+
+    semantic_type_id: ATM_WITHDRAWAL
+
+    confidence: 0.98
+
+    match:
+
+      description_contains:
+        - lev atm
+
+      direction:
+        - DEBIT
+
+  - rule_id: internal_salary_transfer
+
+    enabled: true
+
+    priority: 115
+
+    semantic_type_id: INTERNAL_TRANSFER
+
+    confidence: 0.98
+
+    match:
+
+      description_contains:
+        - ordenado
+
+      direction:
+        - DEBIT
+
   - rule_id: grocery_continente
 
     enabled: true
@@ -48,9 +117,8 @@ rules:
 
     match:
 
-      description_contains:
+      description_startswith:
         - trf p
-        - trf p/
 
       direction:
         - DEBIT
@@ -67,9 +135,27 @@ rules:
 
     match:
 
-      description_contains:
+      description_startswith:
         - trf de
-        - trf. p/o
+        - trf p o
 
       direction:
         - CREDIT
+
+  - rule_id: generic_card_purchase
+
+    enabled: true
+
+    priority: 50
+
+    semantic_type_id: CARD_PURCHASE
+
+    confidence: 0.90
+
+    match:
+
+      description_startswith:
+        - compra
+
+      direction:
+        - DEBIT

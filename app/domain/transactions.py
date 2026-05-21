@@ -40,9 +40,17 @@ class Transaction(
 
     semantic_type_id: str
 
-    matched_rule_id: str | None = None
+    category_id: str = (
+        "uncategorized"
+    )
 
-    semantic_confidence: float = 0.0
+    matched_rule_id: (
+        str | None
+    ) = None
+
+    semantic_confidence: (
+        float
+    ) = 0.0
 
     resolution_status: (
         ResolutionStatusEnum

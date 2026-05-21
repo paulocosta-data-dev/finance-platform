@@ -1,3 +1,5 @@
+import re
+
 from app.domain.transactions import (
     Transaction,
 )
@@ -6,15 +8,10 @@ from app.semantic.models.semantic_rule import (
 )
 
 
-def match_description(
+def match_description_contains(
     transaction: Transaction,
     rule: SemanticRule,
 ) -> bool:
-
-    description = (
-        transaction
-        .normalized_description
-    )
 
     conditions = (
         rule.match
@@ -24,9 +21,67 @@ def match_description(
     if not conditions:
         return True
 
+    description = (
+        transaction
+        .normalized_description
+    )
+
     return any(
         value in description
         for value in conditions
+    )
+
+
+def match_description_startswith(
+    transaction: Transaction,
+    rule: SemanticRule,
+) -> bool:
+
+    conditions = (
+        rule.match
+        .description_startswith
+    )
+
+    if not conditions:
+        return True
+
+    description = (
+        transaction
+        .normalized_description
+    )
+
+    return any(
+        description.startswith(
+            value
+        )
+        for value in conditions
+    )
+
+
+def match_description_regex(
+    transaction: Transaction,
+    rule: SemanticRule,
+) -> bool:
+
+    conditions = (
+        rule.match
+        .description_regex
+    )
+
+    if not conditions:
+        return True
+
+    description = (
+        transaction
+        .normalized_description
+    )
+
+    return any(
+        re.search(
+            pattern,
+            description,
+        )
+        for pattern in conditions
     )
 
 
@@ -54,7 +109,15 @@ def rule_matches(
 ) -> bool:
 
     return all([
-        match_description(
+        match_description_contains(
+            transaction,
+            rule,
+        ),
+        match_description_startswith(
+            transaction,
+            rule,
+        ),
+        match_description_regex(
             transaction,
             rule,
         ),

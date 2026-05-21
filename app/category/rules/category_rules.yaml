@@ -1,0 +1,112 @@
+rules:
+
+  - rule_id: groceries
+
+    enabled: true
+
+    priority: 100
+
+    category_id: groceries
+
+    confidence: 0.98
+
+    match:
+
+      semantic_type_ids:
+        - CARD_PURCHASE
+
+      description_contains:
+        - continente
+        - contin
+        - pingo doce
+        - lidl
+
+  - rule_id: pharmacy
+
+    enabled: true
+
+    priority: 90
+
+    category_id: pharmacy
+
+    confidence: 0.95
+
+    match:
+
+      semantic_type_ids:
+        - CARD_PURCHASE
+
+      description_contains:
+        - farmacia
+
+  - rule_id: restaurant
+
+    enabled: true
+
+    priority: 90
+
+    category_id: restaurant
+
+    confidence: 0.95
+
+    match:
+
+      semantic_type_ids:
+        - CARD_PURCHASE
+
+      description_contains:
+        - churrasqueira
+
+  - rule_id: telecom
+
+    enabled: true
+
+    priority: 90
+
+    category_id: telecom
+
+    confidence: 0.95
+
+    match:
+
+      semantic_type_ids:
+        - CARD_PURCHASE
+
+      description_contains:
+        - meo
+
+  - rule_id: books
+
+    enabled: true
+
+    priority: 90
+
+    category_id: books
+
+    confidence: 0.95
+
+    match:
+
+      semantic_type_ids:
+        - CARD_PURCHASE
+
+      description_contains:
+        - bertrand
+
+  - rule_id: savings
+
+    enabled: true
+
+    priority: 120
+
+    category_id: savings
+
+    confidence: 0.99
+
+    match:
+
+      semantic_type_ids:
+        - INTERNAL_TRANSFER
+
+      description_contains:
+        - dep prazo
