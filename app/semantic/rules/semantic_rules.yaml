@@ -1,0 +1,75 @@
+rules:
+
+  - rule_id: grocery_continente
+
+    enabled: true
+
+    priority: 100
+
+    semantic_type_id: CARD_PURCHASE
+
+    confidence: 0.98
+
+    match:
+
+      description_contains:
+        - continente
+
+      direction:
+        - DEBIT
+
+  - rule_id: grocery_lidl
+
+    enabled: true
+
+    priority: 100
+
+    semantic_type_id: CARD_PURCHASE
+
+    confidence: 0.98
+
+    match:
+
+      description_contains:
+        - lidl
+
+      direction:
+        - DEBIT
+
+  - rule_id: peer_transfer_out
+
+    enabled: true
+
+    priority: 90
+
+    semantic_type_id: PEER_TRANSFER
+
+    confidence: 0.95
+
+    match:
+
+      description_contains:
+        - trf p
+        - trf p/
+
+      direction:
+        - DEBIT
+
+  - rule_id: peer_transfer_in
+
+    enabled: true
+
+    priority: 90
+
+    semantic_type_id: PEER_TRANSFER
+
+    confidence: 0.95
+
+    match:
+
+      description_contains:
+        - trf de
+        - trf. p/o
+
+      direction:
+        - CREDIT

@@ -4,13 +4,17 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from app.domain.enums import DirectionEnum
+from app.domain.enums import (
+    DirectionEnum,
+)
 from app.domain.enums import (
     ResolutionStatusEnum,
 )
 
 
-class Transaction(BaseModel):
+class Transaction(
+    BaseModel
+):
 
     transaction_id: str
 
@@ -21,9 +25,11 @@ class Transaction(BaseModel):
     account_id: str
 
     transaction_date: date
+
     booking_date: date
 
     description: str
+
     normalized_description: str
 
     amount: Decimal
@@ -33,6 +39,10 @@ class Transaction(BaseModel):
     direction: DirectionEnum
 
     semantic_type_id: str
+
+    matched_rule_id: str | None = None
+
+    semantic_confidence: float = 0.0
 
     resolution_status: (
         ResolutionStatusEnum

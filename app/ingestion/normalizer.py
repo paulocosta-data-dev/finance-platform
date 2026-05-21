@@ -12,8 +12,8 @@ from app.domain.transactions import (
 from app.schema.versions import (
     CURRENT_TRANSACTION_SCHEMA_VERSION,
 )
-from app.services.semantic_detection import (
-    detect_semantic_type,
+from app.semantic.services.semantic_engine import (
+    detect_semantic_match,
 )
 from app.services.semantic_registry import (
     get_semantic_type,
@@ -97,6 +97,8 @@ def normalize_raw_transaction(
         currency="EUR",
         direction=direction,
         semantic_type_id="UNKNOWN",
+        matched_rule_id=None,
+        semantic_confidence=0.0,
         resolution_status=(
             ResolutionStatusEnum
             .MANUAL_REVIEW_REQUIRED
@@ -105,14 +107,15 @@ def normalize_raw_transaction(
         created_at=datetime.now(),
     )
 
-    semantic_type_id = (
-        detect_semantic_type(
+    semantic_match = (
+        detect_semantic_match(
             transaction=temp_transaction
         )
     )
 
     semantic_type = get_semantic_type(
-        semantic_type_id
+        semantic_match
+        .semantic_type_id
     )
 
     transaction_id = (
@@ -156,7 +159,16 @@ def normalize_raw_transaction(
         currency="EUR",
         direction=direction,
         semantic_type_id=(
-            semantic_type_id
+            semantic_match
+            .semantic_type_id
+        ),
+        matched_rule_id=(
+            semantic_match
+            .matched_rule_id
+        ),
+        semantic_confidence=(
+            semantic_match
+            .confidence
         ),
         resolution_status=(
             ResolutionStatusEnum
