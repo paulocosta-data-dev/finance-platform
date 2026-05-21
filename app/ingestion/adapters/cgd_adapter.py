@@ -5,6 +5,9 @@ import pandas as pd
 
 from app.domain.imports import RawTransaction
 from app.ingestion.base import BankAdapter
+from app.schema.versions import (
+    CURRENT_RAW_SCHEMA_VERSION,
+)
 from app.utils.raw_hash import (
     generate_raw_transaction_hash,
 )
@@ -79,6 +82,9 @@ class CGDAdapter(BankAdapter):
                             source_row_number
                         ),
                     )
+                ),
+                schema_version=(
+                    CURRENT_RAW_SCHEMA_VERSION
                 ),
                 import_file_id=import_file_id,
                 source_account_id="CGD_MAIN",

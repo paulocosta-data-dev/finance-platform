@@ -1,6 +1,8 @@
 import pandas as pd
 
-from app.domain.imports import RawTransaction
+from app.domain.imports import (
+    RawTransaction,
+)
 from app.ingestion.normalizer import (
     normalize_raw_transaction,
 )
@@ -21,6 +23,9 @@ def rebuild_raw_transaction(
     return RawTransaction(
         raw_transaction_id=(
             row["raw_transaction_id"]
+        ),
+        schema_version=(
+            row["schema_version"]
         ),
         import_file_id=(
             row["import_file_id"]
@@ -48,7 +53,9 @@ def rebuild_raw_transaction(
     )
 
 
-def run_normalization_pipeline():
+def run_normalization_pipeline(
+    rebuild_silver: bool = False,
+):
 
     raw_df = pd.read_parquet(
         RAW_TRANSACTIONS_PATH
@@ -81,7 +88,10 @@ def run_normalization_pipeline():
         )
 
     result = save_transactions(
-        normalized_transactions
+        normalized_transactions,
+        overwrite_existing=(
+            rebuild_silver
+        ),
     )
 
     print(

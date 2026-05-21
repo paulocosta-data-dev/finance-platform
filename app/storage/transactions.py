@@ -2,11 +2,16 @@ from pathlib import Path
 
 import pandas as pd
 
-from app.domain.transactions import Transaction
+from app.domain.transactions import (
+    Transaction,
+)
 
 
 TRANSACTIONS_PATH = (
-    Path("data/processed/transactions.parquet")
+    Path(
+        "data/processed/"
+        "transactions.parquet"
+    )
 )
 
 
@@ -29,43 +34,77 @@ def load_transactions() -> pd.DataFrame:
 
 
 def save_transactions(
-    transactions: list[Transaction],
+    transactions: list[
+        Transaction
+    ],
+    overwrite_existing: bool = False,
 ) -> dict:
 
     new_df = pd.DataFrame([
-        transaction_to_dict(transaction)
-        for transaction in transactions
+        transaction_to_dict(
+            transaction
+        )
+        for transaction
+        in transactions
     ])
 
-    existing_df = load_transactions()
+    existing_df = (
+        load_transactions()
+    )
 
-    existing_count = len(existing_df)
-
-    if not existing_df.empty:
-
-        combined_df = pd.concat(
-            [existing_df, new_df],
-            ignore_index=True,
-        )
-
-        combined_df = combined_df.drop_duplicates(
-            subset=["transaction_id"],
-            keep="first",
-        )
-
-    else:
+    if overwrite_existing:
 
         combined_df = new_df
 
-    final_count = len(combined_df)
+        inserted_count = len(
+            new_df
+        )
 
-    inserted_count = (
-        final_count - existing_count
-    )
+        skipped_duplicates = 0
 
-    skipped_duplicates = (
-        len(new_df) - inserted_count
-    )
+    else:
+
+        existing_count = len(
+            existing_df
+        )
+
+        if not existing_df.empty:
+
+            combined_df = pd.concat(
+                [
+                    existing_df,
+                    new_df,
+                ],
+                ignore_index=True,
+            )
+
+            combined_df = (
+                combined_df
+                .drop_duplicates(
+                    subset=[
+                        "transaction_id"
+                    ],
+                    keep="first",
+                )
+            )
+
+        else:
+
+            combined_df = new_df
+
+        final_count = len(
+            combined_df
+        )
+
+        inserted_count = (
+            final_count
+            - existing_count
+        )
+
+        skipped_duplicates = (
+            len(new_df)
+            - inserted_count
+        )
 
     TRANSACTIONS_PATH.parent.mkdir(
         parents=True,
@@ -79,6 +118,10 @@ def save_transactions(
 
     return {
         "inserted": inserted_count,
-        "duplicates_skipped": skipped_duplicates,
-        "total_transactions": final_count,
+        "duplicates_skipped": (
+            skipped_duplicates
+        ),
+        "total_transactions": (
+            len(combined_df)
+        ),
     }

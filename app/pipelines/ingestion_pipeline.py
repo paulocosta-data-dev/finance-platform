@@ -1,7 +1,15 @@
 from datetime import datetime
+from pathlib import Path
 
-from app.domain.imports import ImportFile
-from app.ingestion.loader import IngestionLoader
+from app.domain.imports import (
+    ImportFile,
+)
+from app.ingestion.loader import (
+    IngestionLoader,
+)
+from app.schema.versions import (
+    CURRENT_IMPORT_SCHEMA_VERSION,
+)
 from app.storage.imports import (
     import_exists,
 )
@@ -19,7 +27,25 @@ from app.utils.file_hash import (
 )
 
 
-def run_ingestion_pipeline():
+RAW_TRANSACTIONS_PATH = (
+    Path(
+        "data/processed/"
+        "raw_transactions.parquet"
+    )
+)
+
+
+def run_ingestion_pipeline(
+    force_reprocess: bool = False,
+    rebuild_bronze: bool = False,
+):
+
+    if (
+        rebuild_bronze
+        and RAW_TRANSACTIONS_PATH.exists()
+    ):
+
+        RAW_TRANSACTIONS_PATH.unlink()
 
     loader = IngestionLoader()
 
@@ -38,7 +64,8 @@ def run_ingestion_pipeline():
         if adapter is None:
 
             print(
-                f"No adapter found for: {file_path}"
+                f"No adapter found for: "
+                f"{file_path}"
             )
 
             continue
@@ -47,11 +74,14 @@ def run_ingestion_pipeline():
             file_path
         )
 
-        if import_exists(file_hash):
+        if (
+            import_exists(file_hash)
+            and not force_reprocess
+        ):
 
             print(
-                f"Skipping already processed file: "
-                f"{file_path.name}"
+                f"Skipping already processed "
+                f"file: {file_path.name}"
             )
 
             continue
@@ -63,10 +93,19 @@ def run_ingestion_pipeline():
 
         import_file = ImportFile(
             import_file_id=file_hash,
-            original_filename=file_path.name,
+            schema_version=(
+                CURRENT_IMPORT_SCHEMA_VERSION
+            ),
+            original_filename=(
+                file_path.name
+            ),
             file_hash=file_hash,
-            source_bank_id=adapter.bank_id,
-            detected_adapter_id=adapter.bank_id,
+            source_bank_id=(
+                adapter.bank_id
+            ),
+            detected_adapter_id=(
+                adapter.bank_id
+            ),
             imported_at=datetime.now(),
             import_status="PROCESSING",
             total_rows=0,
@@ -81,18 +120,24 @@ def run_ingestion_pipeline():
         try:
 
             raw_transactions = (
-                adapter.extract_raw_transactions(
+                adapter
+                .extract_raw_transactions(
                     file_path=file_path,
-                    import_file_id=file_hash,
+                    import_file_id=(
+                        file_hash
+                    ),
                 )
             )
 
-            save_raw_transactions(
-                raw_transactions
+            result = (
+                save_raw_transactions(
+                    raw_transactions,
+                    overwrite_existing=False,
+                )
             )
 
             total_raw_transactions += (
-                len(raw_transactions)
+                result["inserted"]
             )
 
             update_import_status(

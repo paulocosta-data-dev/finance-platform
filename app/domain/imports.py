@@ -8,6 +8,8 @@ class ImportFile(BaseModel):
 
     import_file_id: str
 
+    schema_version: int
+
     original_filename: str
     file_hash: str
 
@@ -30,6 +32,8 @@ class ImportFile(BaseModel):
 class RawTransaction(BaseModel):
 
     raw_transaction_id: str
+
+    schema_version: int
 
     import_file_id: str
 
