@@ -19,58 +19,17 @@ def load_unresolved_transactions(
             df["category_id"]
             == "uncategorized"
         )
-        |
-        (
-            df["semantic_type_id"]
-            == "UNKNOWN"
-        )
     ].copy()
 
-    return unresolved_df
-
-
-def apply_session_overrides(
-    unresolved_df: pd.DataFrame,
-    corrections: dict,
-) -> pd.DataFrame:
-
-    filtered_df = (
-        unresolved_df.copy()
+    unresolved_df = (
+        unresolved_df.sort_values(
+            by=[
+                "transaction_date",
+            ],
+            ascending=False,
+        )
     )
 
-    for (
-        transaction_id,
-        correction_data,
-    ) in corrections.items():
-
-        apply_to_all = (
-            correction_data[
-                "apply_to_all"
-            ]
-        )
-
-        description = (
-            correction_data[
-                "description"
-            ]
-        )
-
-        if apply_to_all:
-
-            filtered_df = filtered_df[
-                filtered_df[
-                    "description"
-                ]
-                != description
-            ]
-
-        else:
-
-            filtered_df = filtered_df[
-                filtered_df[
-                    "transaction_id"
-                ]
-                != transaction_id
-            ]
-
-    return filtered_df
+    return unresolved_df.reset_index(
+        drop=True
+    )

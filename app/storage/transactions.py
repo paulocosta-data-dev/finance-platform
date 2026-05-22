@@ -6,6 +6,10 @@ from app.domain.transactions import (
     Transaction,
 )
 
+from app.overrides.services.override_service import (
+    apply_overrides,
+)
+
 
 TRANSACTIONS_PATH = (
     Path(
@@ -48,27 +52,31 @@ def save_transactions(
         in transactions
     ])
 
-    existing_df = (
-        load_transactions()
-    )
-
     if overwrite_existing:
 
-        combined_df = new_df
+        final_df = (
+            apply_overrides(
+                new_df
+            )
+        )
 
         inserted_count = len(
-            new_df
+            final_df
         )
 
         skipped_duplicates = 0
 
     else:
 
-        existing_count = len(
-            existing_df
+        existing_df = (
+            load_transactions()
         )
 
-        if not existing_df.empty:
+        if existing_df.empty:
+
+            combined_df = new_df
+
+        else:
 
             combined_df = pd.concat(
                 [
@@ -84,26 +92,23 @@ def save_transactions(
                     subset=[
                         "transaction_id"
                     ],
-                    keep="first",
+                    keep="last",
                 )
             )
 
-        else:
-
-            combined_df = new_df
-
-        final_count = len(
-            combined_df
+        final_df = (
+            apply_overrides(
+                combined_df
+            )
         )
 
-        inserted_count = (
-            final_count
-            - existing_count
+        inserted_count = len(
+            new_df
         )
 
         skipped_duplicates = (
-            len(new_df)
-            - inserted_count
+            len(combined_df)
+            - len(new_df)
         )
 
     TRANSACTIONS_PATH.parent.mkdir(
@@ -111,7 +116,7 @@ def save_transactions(
         exist_ok=True,
     )
 
-    combined_df.to_parquet(
+    final_df.to_parquet(
         TRANSACTIONS_PATH,
         index=False,
     )
@@ -122,6 +127,6 @@ def save_transactions(
             skipped_duplicates
         ),
         "total_transactions": (
-            len(combined_df)
+            len(final_df)
         ),
     }
