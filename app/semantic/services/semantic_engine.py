@@ -1,4 +1,4 @@
-from app.domain.semantic_match import (
+from app.semantic.models.semantic_match import (
     SemanticMatchResult,
 )
 from app.domain.transactions import (

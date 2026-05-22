@@ -18,7 +18,7 @@ from app.schema.versions import (
 from app.semantic.services.semantic_engine import (
     detect_semantic_match,
 )
-from app.services.semantic_registry import (
+from app.semantic.services.semantic_registry import (
     get_semantic_type,
 )
 from app.utils.hash import (

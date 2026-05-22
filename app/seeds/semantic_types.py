@@ -1,4 +1,4 @@
-from app.domain.semantic_types import SemanticType
+from app.semantic.models.semantic_types import SemanticType
 
 
 SEMANTIC_TYPES = [
