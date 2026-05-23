@@ -12,6 +12,16 @@ if not exist ".venv" (
 
 call .venv\Scripts\activate
 
+echo.
+echo Starting Finance Platform...
+echo.
+
 python flet_app.py
+
+if errorlevel 1 (
+    echo.
+    echo Application crashed.
+    echo.
+)
 
 pause
