@@ -1,174 +1,27 @@
 import flet as ft
 
-from app.ui.services.category_service import (
-    load_available_categories,
-    persist_category,
+from app.frontend.pages.home_page import (
+    build_home_page,
 )
 
-from app.ui.services.review_service import (
-    save_corrections,
+from app.frontend.pages.import_page import (
+    ImportPage,
 )
 
-from app.ui.services.transaction_service import (
-    load_unresolved_transactions,
+from app.frontend.pages.recurring_page import (
+    RecurringPage,
+)
+
+from app.frontend.pages.review_page import (
+    ReviewPage,
+)
+
+from app.frontend.pages.reviewed_page import (
+    ReviewedPage,
 )
 
 
-class ReviewRow:
-
-    def __init__(
-        self,
-        row,
-        available_categories,
-    ):
-
-        self.row = row
-
-        self.transaction_id = (
-            row["transaction_id"]
-        )
-
-        self.description = row[
-            "description"
-        ]
-
-        self.current_category = row[
-            "category_id"
-        ]
-
-        self.selected_category = (
-            ft.Dropdown(
-                value=self.current_category,
-                options=[
-                    ft.dropdown.Option(
-                        category
-                    )
-                    for category
-                    in available_categories
-                ],
-                width=220,
-            )
-        )
-
-        self.new_category = (
-            ft.TextField(
-                hint_text="Create...",
-                width=220,
-            )
-        )
-
-        self.apply_all = (
-            ft.Checkbox(
-                value=False,
-            )
-        )
-
-    def build(self):
-
-        return ft.Row(
-            controls=[
-                ft.Container(
-                    content=ft.Text(
-                        str(
-                            self.row[
-                                "transaction_date"
-                            ]
-                        )[:10]
-                    ),
-                    width=120,
-                ),
-                ft.Container(
-                    content=ft.Text(
-                        self.description
-                    ),
-                    width=450,
-                ),
-                ft.Container(
-                    content=ft.Text(
-                        str(
-                            round(
-                                self.row[
-                                    "amount"
-                                ],
-                                2,
-                            )
-                        )
-                    ),
-                    width=120,
-                ),
-                ft.Container(
-                    content=ft.Text(
-                        self.current_category
-                    ),
-                    width=160,
-                ),
-                self.selected_category,
-                self.new_category,
-                ft.Row(
-                    controls=[
-                        self.apply_all,
-                        ft.Text(
-                            "Apply All"
-                        ),
-                    ],
-                    spacing=5,
-                ),
-            ]
-        )
-
-    def get_correction(self):
-
-        category = (
-            self.selected_category.value
-        )
-
-        new_category = (
-            self.new_category.value
-        )
-
-        if (
-            new_category
-            and new_category.strip()
-        ):
-
-            normalized_new_category = (
-                new_category
-                .strip()
-                .lower()
-                .replace(
-                    " ",
-                    "_",
-                )
-            )
-
-            persist_category(
-                normalized_new_category
-            )
-
-            category = (
-                normalized_new_category
-            )
-
-        if (
-            category
-            == self.current_category
-            and not self.apply_all.value
-        ):
-
-            return None
-
-        return {
-            "category_id": category,
-            "apply_to_all": (
-                self.apply_all.value
-            ),
-            "description": (
-                self.description
-            ),
-        }
-
-
-class FinanceReviewApp:
+class FinancePlatformApp:
 
     def __init__(
         self,
@@ -185,169 +38,156 @@ class FinanceReviewApp:
 
         self.page.window_height = 900
 
-        self.page.scroll = (
-            ft.ScrollMode.AUTO
+        self.page.padding = 0
+
+        self.content = ft.Container(
+            expand=True,
+            padding=20,
         )
 
-        self.available_categories = (
-            load_available_categories()
+        self.review_page = (
+            ReviewPage(page)
         )
 
-        self.review_rows = []
-
-        self.content_column = (
-            ft.Column(
-                spacing=10,
-                scroll=ft.ScrollMode.AUTO,
-            )
+        self.reviewed_page = (
+            ReviewedPage(page)
         )
 
-        self.status_text = ft.Text()
+        self.import_page = (
+            ImportPage(page)
+        )
 
-        self.load_transactions()
+        self.recurring_page = (
+            RecurringPage(page)
+        )
 
-        apply_button = (
-            ft.Button(
-                content=ft.Text(
-                    "Apply Changes"
+        navigation = ft.Column(
+            width=250,
+            controls=[
+                ft.Text(
+                    "Finance Platform",
+                    size=28,
+                    weight=(
+                        ft.FontWeight.BOLD
+                    ),
                 ),
-                on_click=self.apply_changes,
-            )
-        )
-
-        self.page.add(
-            ft.Column(
-                controls=[
-                    ft.Text(
-                        "Finance Platform",
-                        size=32,
-                        weight=(
-                            ft.FontWeight.BOLD
-                        ),
+                ft.Divider(),
+                ft.Button(
+                    content=ft.Text(
+                        "Dashboard"
                     ),
-                    ft.Text(
+                    on_click=lambda e:
+                    self.show_dashboard(),
+                ),
+                ft.Button(
+                    content=ft.Text(
                         (
-                            "Unresolved "
-                            "Transactions Review"
-                        ),
-                        size=18,
+                            "Review "
+                            "Transactions"
+                        )
                     ),
-                    self.status_text,
-                    apply_button,
-                    self.content_column,
-                ]
-            )
-        )
-
-    def load_transactions(self):
-
-        self.content_column.controls.clear()
-
-        unresolved_df = (
-            load_unresolved_transactions()
-        )
-
-        unresolved_count = len(
-            unresolved_df
-        )
-
-        self.status_text.value = (
-            f"""
-Unresolved transactions:
-{unresolved_count}
-"""
-        )
-
-        self.review_rows = []
-
-        for _, row in unresolved_df.iterrows():
-
-            review_row = (
-                ReviewRow(
-                    row=row,
-                    available_categories=(
-                        self.available_categories
+                    on_click=lambda e:
+                    self.show_review(),
+                ),
+                ft.Button(
+                    content=ft.Text(
+                        (
+                            "Reviewed "
+                            "Transactions"
+                        )
                     ),
-                )
-            )
+                    on_click=lambda e:
+                    self.show_reviewed(),
+                ),
+                ft.Button(
+                    content=ft.Text(
+                        (
+                            "Recurring "
+                            "Transactions"
+                        )
+                    ),
+                    on_click=lambda e:
+                    self.show_recurring(),
+                ),
+                ft.Button(
+                    content=ft.Text(
+                        "Import Bank File"
+                    ),
+                    on_click=lambda e:
+                    self.show_import(),
+                ),
+            ],
+        )
 
-            self.review_rows.append(
-                review_row
-            )
+        layout = ft.Row(
+            expand=True,
+            controls=[
+                ft.Container(
+                    width=280,
+                    padding=20,
+                    bgcolor=(
+                        ft.Colors.BLUE_50
+                    ),
+                    content=navigation,
+                ),
+                self.content,
+            ],
+        )
 
-            self.content_column.controls.append(
-                review_row.build()
-            )
+        self.page.add(layout)
+
+        self.show_dashboard()
+
+    def show_dashboard(self):
+
+        self.content.content = (
+            build_home_page()
+        )
 
         self.page.update()
 
-    def apply_changes(
-        self,
-        e,
-    ):
+    def show_review(self):
 
-        corrections = {}
+        self.review_page.load_transactions()
 
-        unresolved_df = (
-            load_unresolved_transactions()
+        self.content.content = (
+            self.review_page.build()
         )
 
-        for review_row in self.review_rows:
+        self.page.update()
 
-            correction = (
-                review_row.get_correction()
-            )
+    def show_reviewed(self):
 
-            if correction is not None:
+        self.reviewed_page.load_transactions()
 
-                corrections[
-                    review_row.transaction_id
-                ] = correction
+        self.content.content = (
+            self.reviewed_page.build()
+        )
 
-        if not corrections:
+        self.page.update()
 
-            self.status_text.value = (
-                "No corrections to apply"
-            )
+    def show_recurring(self):
 
-            self.page.update()
+        self.recurring_page.load_recurring()
 
-            return
+        self.content.content = (
+            self.recurring_page.build()
+        )
 
-        try:
+        self.page.update()
 
-            save_corrections(
-                corrections=corrections,
-                unresolved_df=(
-                    unresolved_df
-                ),
-            )
+    def show_import(self):
 
-            self.status_text.value = (
-                (
-                    "Corrections applied "
-                    "successfully"
-                )
-            )
+        self.content.content = (
+            self.import_page.build()
+        )
 
-            self.available_categories = (
-                load_available_categories()
-            )
-
-            self.load_transactions()
-
-        except Exception as error:
-
-            self.status_text.value = (
-                f"Error: {error}"
-            )
-
-            self.page.update()
+        self.page.update()
 
 
 def main(page: ft.Page):
 
-    FinanceReviewApp(page)
+    FinancePlatformApp(page)
 
 
 ft.run(main)

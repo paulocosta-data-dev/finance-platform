@@ -91,9 +91,9 @@ def save_corrections(
             ]
         )
 
-        description = (
+        normalized_description = (
             correction_data[
-                "description"
+                "normalized_description"
             ]
         )
 
@@ -102,9 +102,9 @@ def save_corrections(
             matching_transactions = (
                 unresolved_df[
                     unresolved_df[
-                        "description"
+                        "normalized_description"
                     ]
-                    == description
+                    == normalized_description
                 ]
             )
 
@@ -149,7 +149,7 @@ def save_corrections(
 
             append_learned_rule(
                 description=(
-                    description
+                    normalized_description
                 ),
                 category_id=(
                     category_id

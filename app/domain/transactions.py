@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from app.domain.enums import (
     DirectionEnum,
 )
+
 from app.domain.enums import (
     ResolutionStatusEnum,
 )
@@ -57,5 +58,17 @@ class Transaction(
     )
 
     is_terminal_spending: bool
+
+    entity_name: (
+        str | None
+    ) = None
+
+    entity_type: (
+        str | None
+    ) = None
+
+    entity_confidence: (
+        float
+    ) = 0.0
 
     created_at: datetime

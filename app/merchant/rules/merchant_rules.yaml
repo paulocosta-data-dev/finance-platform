@@ -1,0 +1,42 @@
+rules:
+
+  - merchant_name: continente
+
+    match_contains:
+      - continente
+      - contin bom dia
+
+  - merchant_name: pingo_doce
+
+    match_contains:
+      - pingo doce
+
+  - merchant_name: lidl
+
+    match_contains:
+      - lidl
+
+  - merchant_name: meo
+
+    match_contains:
+      - meo
+
+  - merchant_name: farmacia
+
+    match_contains:
+      - farmacia
+
+  - merchant_name: bertrand
+
+    match_contains:
+      - bertrand
+
+  - merchant_name: condominio
+
+    match_contains:
+      - condominio
+
+  - merchant_name: dep_prazo
+
+    match_contains:
+      - dep prazo

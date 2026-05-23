@@ -4,23 +4,39 @@ from decimal import Decimal
 from app.category.services.category_engine import (
     detect_category,
 )
-from app.domain.enums import DirectionEnum
+
+from app.domain.enums import (
+    DirectionEnum,
+)
+
 from app.domain.enums import (
     ResolutionStatusEnum,
 )
-from app.domain.imports import RawTransaction
+
+from app.domain.imports import (
+    RawTransaction,
+)
+
 from app.domain.transactions import (
     Transaction,
 )
+
+from app.entity.services.entity_detection_service import (
+    detect_entity,
+)
+
 from app.schema.versions import (
     CURRENT_TRANSACTION_SCHEMA_VERSION,
 )
+
 from app.semantic.services.semantic_engine import (
     detect_semantic_match,
 )
+
 from app.semantic.services.semantic_registry import (
     get_semantic_type,
 )
+
 from app.utils.hash import (
     generate_transaction_hash,
 )
@@ -44,7 +60,10 @@ def determine_direction(
 ) -> DirectionEnum:
 
     if amount < 0:
-        return DirectionEnum.DEBIT
+
+        return (
+            DirectionEnum.DEBIT
+        )
 
     return DirectionEnum.CREDIT
 
@@ -60,7 +79,8 @@ def normalize_raw_transaction(
 
     normalized_description = (
         normalize_description(
-            raw_transaction.raw_description
+            raw_transaction
+            .raw_description
         )
     )
 
@@ -68,52 +88,66 @@ def normalize_raw_transaction(
         amount
     )
 
-    temp_transaction = Transaction(
-        transaction_id="temp",
-        schema_version=(
-            CURRENT_TRANSACTION_SCHEMA_VERSION
-        ),
-        raw_transaction_id=(
-            raw_transaction
-            .raw_transaction_id
-        ),
-        account_id=account_id,
-        transaction_date=(
-            datetime.fromisoformat(
-                raw_transaction.raw_date
-            ).date()
-        ),
-        booking_date=(
-            datetime.fromisoformat(
+    temp_transaction = (
+        Transaction(
+            transaction_id="temp",
+            schema_version=(
+                CURRENT_TRANSACTION_SCHEMA_VERSION
+            ),
+            raw_transaction_id=(
                 raw_transaction
-                .raw_booking_date
-            ).date()
-        ),
-        description=(
-            raw_transaction
-            .raw_description
-        ),
-        normalized_description=(
-            normalized_description
-        ),
-        amount=amount,
-        currency="EUR",
-        direction=direction,
-        semantic_type_id="UNKNOWN",
-        category_id="uncategorized",
-        matched_rule_id=None,
-        semantic_confidence=0.0,
-        resolution_status=(
-            ResolutionStatusEnum
-            .MANUAL_REVIEW_REQUIRED
-        ),
-        is_terminal_spending=False,
-        created_at=datetime.now(),
+                .raw_transaction_id
+            ),
+            account_id=account_id,
+            transaction_date=(
+                datetime.fromisoformat(
+                    raw_transaction
+                    .raw_date
+                ).date()
+            ),
+            booking_date=(
+                datetime.fromisoformat(
+                    raw_transaction
+                    .raw_booking_date
+                ).date()
+            ),
+            description=(
+                raw_transaction
+                .raw_description
+            ),
+            normalized_description=(
+                normalized_description
+            ),
+            amount=amount,
+            currency="EUR",
+            direction=direction,
+            semantic_type_id=(
+                "UNKNOWN"
+            ),
+            category_id=(
+                "uncategorized"
+            ),
+            matched_rule_id=None,
+            semantic_confidence=0.0,
+            resolution_status=(
+                ResolutionStatusEnum
+                .MANUAL_REVIEW_REQUIRED
+            ),
+            is_terminal_spending=False,
+            entity_name=None,
+            entity_type=None,
+            entity_confidence=0.0,
+            created_at=(
+                datetime.now()
+            ),
+        )
     )
 
     semantic_match = (
         detect_semantic_match(
-            transaction=temp_transaction
+            transaction=(
+                temp_transaction
+            )
         )
     )
 
@@ -122,13 +156,21 @@ def normalize_raw_transaction(
         .semantic_type_id
     )
 
+    semantic_type = (
+        get_semantic_type(
+            semantic_match
+            .semantic_type_id
+        )
+    )
+
     category_id = detect_category(
         temp_transaction
     )
 
-    semantic_type = get_semantic_type(
-        semantic_match
-        .semantic_type_id
+    entity_match = (
+        detect_entity(
+            temp_transaction
+        )
     )
 
     transaction_id = (
@@ -141,7 +183,9 @@ def normalize_raw_transaction(
     )
 
     return Transaction(
-        transaction_id=transaction_id,
+        transaction_id=(
+            transaction_id
+        ),
         schema_version=(
             CURRENT_TRANSACTION_SCHEMA_VERSION
         ),
@@ -152,7 +196,8 @@ def normalize_raw_transaction(
         account_id=account_id,
         transaction_date=(
             datetime.fromisoformat(
-                raw_transaction.raw_date
+                raw_transaction
+                .raw_date
             ).date()
         ),
         booking_date=(
@@ -191,6 +236,18 @@ def normalize_raw_transaction(
         is_terminal_spending=(
             semantic_type
             .is_terminal_spending
+        ),
+        entity_name=(
+            entity_match
+            .entity_name
+        ),
+        entity_type=(
+            entity_match
+            .entity_type
+        ),
+        entity_confidence=(
+            entity_match
+            .confidence
         ),
         created_at=datetime.now(),
     )
