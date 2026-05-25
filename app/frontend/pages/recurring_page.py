@@ -4,6 +4,10 @@ from app.category.services.recurring_detection_service import (
     detect_recurring_transactions,
 )
 
+from app.recurring.services.recurring_override_service import (
+    save_recurring_override,
+)
+
 
 class RecurringPage:
 
@@ -99,10 +103,101 @@ class RecurringPage:
                 )
             )
 
+    def confirm_recurring(
+        self,
+        entity_name: str,
+        recurring_type: str,
+        cadence: str,
+    ):
+
+        save_recurring_override(
+            entity_name=entity_name,
+            status="confirmed",
+            recurring_type=(
+                recurring_type
+            ),
+            cadence=cadence,
+        )
+
+        self.load_recurring()
+
+        self.page.update()
+
+    def ignore_recurring(
+        self,
+        entity_name: str,
+    ):
+
+        save_recurring_override(
+            entity_name=entity_name,
+            status="ignored",
+            recurring_type="ignored",
+            cadence="ignored",
+        )
+
+        self.load_recurring()
+
+        self.page.update()
+
     def build_row(
         self,
         result,
     ):
+
+        entity_name = result[
+            "entity_name"
+        ]
+
+        recurring_type_dropdown = (
+            ft.Dropdown(
+                width=220,
+                value="behavioral",
+                options=[
+                    ft.dropdown.Option(
+                        "behavioral"
+                    ),
+                    ft.dropdown.Option(
+                        "subscription"
+                    ),
+                    ft.dropdown.Option(
+                        "obligation"
+                    ),
+                    ft.dropdown.Option(
+                        "salary"
+                    ),
+                    ft.dropdown.Option(
+                        "savings"
+                    ),
+                ],
+            )
+        )
+
+        cadence_dropdown = (
+            ft.Dropdown(
+                width=180,
+                value="monthly",
+                options=[
+                    ft.dropdown.Option(
+                        "weekly"
+                    ),
+                    ft.dropdown.Option(
+                        "biweekly"
+                    ),
+                    ft.dropdown.Option(
+                        "monthly"
+                    ),
+                    ft.dropdown.Option(
+                        "quarterly"
+                    ),
+                    ft.dropdown.Option(
+                        "yearly"
+                    ),
+                    ft.dropdown.Option(
+                        "irregular"
+                    ),
+                ],
+            )
+        )
 
         return ft.Container(
             padding=15,
@@ -126,14 +221,12 @@ class RecurringPage:
                 ),
             ),
             content=ft.Column(
-                spacing=8,
+                spacing=12,
                 controls=[
                     ft.Row(
                         controls=[
                             ft.Text(
-                                result[
-                                    "entity_name"
-                                ],
+                                entity_name,
                                 size=22,
                                 weight=(
                                     ft.FontWeight.BOLD
@@ -221,6 +314,49 @@ class RecurringPage:
                                         size=18,
                                     ),
                                 ],
+                            ),
+                        ],
+                    ),
+                    ft.Row(
+                        spacing=20,
+                        controls=[
+                            recurring_type_dropdown,
+                            cadence_dropdown,
+                            ft.Button(
+                                content=ft.Text(
+                                    "Confirm"
+                                ),
+                                on_click=lambda e,
+                                entity_name=entity_name,
+                                recurring_type_dropdown=(
+                                    recurring_type_dropdown
+                                ),
+                                cadence_dropdown=(
+                                    cadence_dropdown
+                                ):
+                                self.confirm_recurring(
+                                    entity_name=(
+                                        entity_name
+                                    ),
+                                    recurring_type=(
+                                        recurring_type_dropdown
+                                        .value
+                                    ),
+                                    cadence=(
+                                        cadence_dropdown
+                                        .value
+                                    ),
+                                ),
+                            ),
+                            ft.Button(
+                                content=ft.Text(
+                                    "Ignore"
+                                ),
+                                on_click=lambda e,
+                                entity_name=entity_name:
+                                self.ignore_recurring(
+                                    entity_name
+                                ),
                             ),
                         ],
                     ),

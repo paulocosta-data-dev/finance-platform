@@ -37,6 +37,9 @@ DATASETS = {
         "semantic_confidence",
         "matched_rule_id",
         "category_id",
+        "entity_name",
+        "entity_type",
+        "entity_confidence",
         "created_at",
         "schema_version",
     ],
@@ -45,7 +48,13 @@ DATASETS = {
         "override_category_id",
         "override_timestamp",
     ],
-    
+    "data/processed/recurring_overrides.parquet": [
+        "entity_name",
+        "status",
+        "recurring_type",
+        "cadence",
+        "timestamp",
+    ],
     "data/processed/learned_category_rules.yaml": [],
 }
 

@@ -1,5 +1,9 @@
 import flet as ft
 
+from app.frontend.pages.forecast_page import (
+    ForecastPage,
+)
+
 from app.frontend.pages.home_page import (
     build_home_page,
 )
@@ -18,6 +22,10 @@ from app.frontend.pages.review_page import (
 
 from app.frontend.pages.reviewed_page import (
     ReviewedPage,
+)
+
+from app.frontend.pages.reviewed_recurring_page import (
+    ReviewedRecurringPage,
 )
 
 
@@ -61,6 +69,16 @@ class FinancePlatformApp:
             RecurringPage(page)
         )
 
+        self.reviewed_recurring_page = (
+            ReviewedRecurringPage(
+                page
+            )
+        )
+
+        self.forecast_page = (
+            ForecastPage(page)
+        )
+
         navigation = ft.Column(
             width=250,
             controls=[
@@ -78,6 +96,13 @@ class FinancePlatformApp:
                     ),
                     on_click=lambda e:
                     self.show_dashboard(),
+                ),
+                ft.Button(
+                    content=ft.Text(
+                        "Forecast"
+                    ),
+                    on_click=lambda e:
+                    self.show_forecast(),
                 ),
                 ft.Button(
                     content=ft.Text(
@@ -108,6 +133,16 @@ class FinancePlatformApp:
                     ),
                     on_click=lambda e:
                     self.show_recurring(),
+                ),
+                ft.Button(
+                    content=ft.Text(
+                        (
+                            "Reviewed "
+                            "Recurring"
+                        )
+                    ),
+                    on_click=lambda e:
+                    self.show_reviewed_recurring(),
                 ),
                 ft.Button(
                     content=ft.Text(
@@ -146,6 +181,15 @@ class FinancePlatformApp:
 
         self.page.update()
 
+    def show_forecast(self):
+
+        self.content.content = (
+            self.forecast_page
+            .build()
+        )
+
+        self.page.update()
+
     def show_review(self):
 
         self.review_page.load_transactions()
@@ -172,6 +216,19 @@ class FinancePlatformApp:
 
         self.content.content = (
             self.recurring_page.build()
+        )
+
+        self.page.update()
+
+    def show_reviewed_recurring(
+        self,
+    ):
+
+        self.reviewed_recurring_page.load_overrides()
+
+        self.content.content = (
+            self.reviewed_recurring_page
+            .build()
         )
 
         self.page.update()

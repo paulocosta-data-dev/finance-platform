@@ -1,0 +1,33 @@
+forecast_groups:
+
+  Food:
+
+    entities:
+      - continente
+      - pingo_doce
+      - lidl
+
+  Housing:
+
+    entities:
+      - condominio
+
+  Savings:
+
+    entities:
+      - dep_prazo
+
+  Income:
+
+    entities:
+      - salary
+
+  Utilities:
+
+    entities:
+      - meo
+
+  Health:
+
+    entities:
+      - farmacia

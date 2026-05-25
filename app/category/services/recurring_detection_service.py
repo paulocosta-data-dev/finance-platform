@@ -2,6 +2,10 @@ from collections import defaultdict
 
 import pandas as pd
 
+from app.recurring.services.recurring_override_service import (
+    get_override_lookup,
+)
+
 
 TRANSACTIONS_PATH = (
     "data/processed/transactions.parquet"
@@ -9,6 +13,7 @@ TRANSACTIONS_PATH = (
 
 
 MIN_OCCURRENCES = 3
+
 
 EXCLUDED_ENTITIES = {
     "peer_transfer",
@@ -31,6 +36,10 @@ def detect_recurring_transactions():
 
         return []
 
+    override_lookup = (
+        get_override_lookup()
+    )
+
     recurring_candidates = (
         defaultdict(list)
     )
@@ -40,7 +49,7 @@ def detect_recurring_transactions():
         entity_name = (
             row["entity_name"]
         )
-        
+
         if not entity_name:
 
             continue
@@ -50,6 +59,24 @@ def detect_recurring_transactions():
         ):
 
             continue
+
+        override = (
+            override_lookup.get(
+                entity_name
+            )
+        )
+
+        if override:
+
+            if (
+                override["status"]
+                in [
+                    "confirmed",
+                    "ignored",
+                ]
+            ):
+
+                continue
 
         recurring_candidates[
             entity_name

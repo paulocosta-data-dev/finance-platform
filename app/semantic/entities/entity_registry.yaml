@@ -1,0 +1,49 @@
+entities:
+
+  continente:
+
+    aliases:
+      - contin
+      - continente bom dia
+      - continente lisboa
+      - continente lisb
+      - contin bom dia
+
+  pingo_doce:
+
+    aliases:
+      - pingo doce
+      - pingo doce lisboa
+      - pingo doce campo peq
+      - pingo doce odivelas
+
+  lidl:
+
+    aliases:
+      - lidl agradece
+
+  meo:
+
+    aliases:
+      - meo lisboa
+
+  farmacia:
+
+    aliases:
+      - farmacia santa maria
+      - loja da farmacia
+
+  condominio:
+
+    aliases:
+      - condominio predio
+      - encosta sol
+
+  dep_prazo:
+
+    aliases:
+      - dep prazo
+      - reforco dep prazo
+      - reforco aut dep prazo
+      - constit dep prazo
+      - liq parcial dep prazo
