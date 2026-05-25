@@ -1,15 +1,28 @@
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 
 
-OVERRIDES_PATH = (
+OVERRIDES_PATH = Path(
     "data/processed/"
     "recurring_overrides.parquet"
 )
 
 
 def load_overrides():
+
+    if not OVERRIDES_PATH.exists():
+
+        return pd.DataFrame(
+            columns=[
+                "entity_name",
+                "status",
+                "recurring_type",
+                "cadence",
+                "timestamp",
+            ]
+        )
 
     return pd.read_parquet(
         OVERRIDES_PATH
@@ -98,20 +111,4 @@ def save_recurring_override(
                 overrides_df,
                 new_row_df,
             ],
-            ignore_index=True,
-        )
-
-    updated_df = (
-        updated_df
-        .drop_duplicates(
-            subset=[
-                "entity_name"
-            ],
-            keep="last",
-        )
-    )
-
-    updated_df.to_parquet(
-        OVERRIDES_PATH,
-        index=False,
-    )
+     

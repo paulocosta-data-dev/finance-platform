@@ -9,8 +9,32 @@ LEARNED_RULES_PATH = Path(
 )
 
 
+def _ensure_learned_rules_file() -> None:
+
+    if LEARNED_RULES_PATH.exists():
+        return
+
+    LEARNED_RULES_PATH.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    with open(
+        LEARNED_RULES_PATH,
+        "w",
+    ) as file:
+
+        yaml.dump(
+            {"rules": []},
+            file,
+            sort_keys=False,
+        )
+
+
 def load_learned_rules(
 ) -> dict:
+
+    _ensure_learned_rules_file()
 
     with open(
         LEARNED_RULES_PATH,
@@ -58,29 +82,4 @@ learned_
     }
 
     existing_rules = (
-        rules_config["rules"]
-    )
-
-    for rule in existing_rules:
-
-        if (
-            rule["pattern"]
-            == description.lower()
-        ):
-
-            return
-
-    existing_rules.append(
-        new_rule
-    )
-
-    with open(
-        LEARNED_RULES_PATH,
-        "w",
-    ) as file:
-
-        yaml.dump(
-            rules_config,
-            file,
-            sort_keys=False,
-        )
+        
