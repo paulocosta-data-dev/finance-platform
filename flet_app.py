@@ -4,6 +4,10 @@ from app.frontend.pages.forecast_page import (
     ForecastPage,
 )
 
+from app.frontend.pages.health_page import (
+    HealthPage,
+)
+
 from app.frontend.pages.home_page import (
     build_home_page,
 )
@@ -79,6 +83,10 @@ class FinancePlatformApp:
             ForecastPage(page)
         )
 
+        self.health_page = (
+            HealthPage(page)
+        )
+
         navigation = ft.Column(
             width=250,
             controls=[
@@ -150,6 +158,14 @@ class FinancePlatformApp:
                     ),
                     on_click=lambda e:
                     self.show_import(),
+                ),
+                ft.Divider(),
+                ft.Button(
+                    content=ft.Text(
+                        "Health Check"
+                    ),
+                    on_click=lambda e:
+                    self.show_health_check(),
                 ),
             ],
         )
@@ -224,27 +240,4 @@ class FinancePlatformApp:
         self,
     ):
 
-        self.reviewed_recurring_page.load_overrides()
-
-        self.content.content = (
-            self.reviewed_recurring_page
-            .build()
-        )
-
-        self.page.update()
-
-    def show_import(self):
-
-        self.content.content = (
-            self.import_page.build()
-        )
-
-        self.page.update()
-
-
-def main(page: ft.Page):
-
-    FinancePlatformApp(page)
-
-
-ft.run(main)
+        se
