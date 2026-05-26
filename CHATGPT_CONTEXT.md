@@ -44,21 +44,22 @@ finance-platform/
 ├── flet_app.py                  # App entry point — run with: flet run flet_app.py
 ├── start.bat                    # Windows convenience launcher
 ├── app/
-│   ├── domain/                  # Pydantic models (Transaction, RawTransaction, ImportFile, enums)
+│   ├── domain/                  # Pydantic models (Transaction, RawTransaction, ImportFile, Allocation, enums)
 │   ├── ingestion/               # Bank file adapters (CGD, Activo) + normalizer
 │   ├── pipelines/               # Ingestion and normalization pipelines
 │   ├── semantic/                # Semantic type detection (PURCHASE, SALARY, ATM_WITHDRAWAL, etc.)
 │   ├── category/                # Category rule matching + recurring detection
 │   ├── merchant/                # Merchant identification
 │   ├── entity/                  # Entity detection (merchant vs. financial flow)
-│   ├── cashflow/                # Forecasting models + monthly cashflow service
+│   ├── cashflow/                # Forecasting models + monthly cashflow + dashboard service
 │   ├── recurring/               # Recurring override service
 │   ├── overrides/               # Human corrections service
-│   ├── storage/                 # Parquet read/write for transactions, raw, imports
+│   ├── allocations/services/    # ATM allocation service
+│   ├── storage/                 # Parquet read/write for transactions, raw, imports, allocations
 │   ├── seeds/                   # Base reference data (categories, semantic types)
-│   ├── schema/                  # Schema versioning
-│   ├── utils/                   # Hashing utilities
-│   ├── ui/services/             # Services called by UI pages
+│   ├── schema/                  # Schema versioning + migration runner
+│   ├── utils/                   # paths.py (data_path / resource_path)
+│   ├── ui/services/             # Services called by UI pages (account, category, transaction, etc.)
 │   └── frontend/pages/          # Flet UI pages (one file per page)
 ├── tests/                       # Unit tests (unittest-based, run via Health Check page)
 │   ├── helpers.py
@@ -67,12 +68,13 @@ finance-platform/
 │   ├── test_forecasting.py
 │   └── test_recurring.py
 └── data/
-    └── processed/               # Parquet files (created at runtime, not in git)
+    └── processed/               # Parquet/YAML files (created at runtime, not in git)
         ├── transactions.parquet
         ├── raw_transactions.parquet
         ├── imports.parquet
         ├── transaction_overrides.parquet
         ├── recurring_overrides.parquet
+        ├── allocations.parquet
         └── learned_category_rules.yaml
 ```
 
@@ -188,7 +190,7 @@ Page patterns:
 - **Function-based**: `def build_X_page() -> ft.Column`
 - **Class-based**: `class XPage: def __init__(self, page): ... def build(self) -> ft.Column`
 
-Current pages: Dashboard, Forecast, Review Transactions, Reviewed Transactions, Recurring Transactions, Reviewed Recurring, Import Bank File, Health Check.
+Current pages: Dashboard, Forecast, Review Transactions, Reviewed Transactions, Recurring Transactions, Reviewed Recurring, Import Bank File, ATM Allocations, Learned Rules, Health Check.
 
 **Flet 0.85 API notes** (these differ from newer Flet docs):
 - Buttons: `ft.Button(content=ft.Text("label"), on_click=handler)` — NOT `ft.ElevatedButton(text=...)`
@@ -215,6 +217,22 @@ Run from inside the app via the **Health Check** page — no terminal needed.
 
 ---
 
+## Path resolution (portable across dev and packaged exe)
+
+`app/utils/paths.py` centralises all path resolution:
+
+```python
+def data_path(relative: str) -> Path:
+    """User data files (parquet, yaml rules). Next to exe when packaged."""
+
+def resource_path(relative: str) -> Path:
+    """Bundled read-only resources (YAML rule files). In sys._MEIPASS when packaged."""
+```
+
+All services use these functions — no hardcoded strings anywhere. This ensures the app works both via `flet run flet_app.py` and as a bundled `.exe`.
+
+---
+
 ## Schema migration system
 
 `app/schema/` contains a full forward-migration engine.
@@ -227,29 +245,11 @@ Run from inside the app via the **Health Check** page — no terminal needed.
 **How it runs:** `flet_app.py` calls `run_pending_migrations()` at the very start of `FinancePlatformApp.__init__()`, before any page is instantiated.
 
 **How to add a new migration:**
-1. Bump the relevant constant in `versions.py` (e.g. `CURRENT_TRANSACTION_SCHEMA_VERSION = 2`)
+1. Bump the relevant constant in `versions.py`
 2. Add a function `_transactions_v1_to_v2(df) -> df` in `migrations.py`
 3. Append `(1, 2, _transactions_v1_to_v2)` to `MIGRATIONS["transactions"]`
 
 Never modify existing migration entries — only append.
-
----
-
-## Path resolution (portable across dev and packaged exe)
-
-`app/utils/paths.py` centralises all path resolution:
-
-```python
-def data_path(relative: str) -> Path:
-    """User data files (parquet, yaml rules). Next to exe when packaged."""
-    ...
-
-def resource_path(relative: str) -> Path:
-    """Bundled read-only resources (YAML rule files). In sys._MEIPASS when packaged."""
-    ...
-```
-
-All services use these functions — no hardcoded strings anywhere. This ensures the app works both via `flet run flet_app.py` and as a bundled `.exe`.
 
 ---
 
@@ -258,7 +258,7 @@ All services use these functions — no hardcoded strings anywhere. This ensures
 `app/category/services/learned_rule_service.py` manages rules written to `data/processed/learned_category_rules.yaml`.
 
 **Functions:**
-- `append_learned_rule(description, category_id)` — adds or updates a rule; same pattern → updates in-place (no duplicates)
+- `append_learned_rule(description, category_id)` — adds or updates; same pattern → updates in-place (no duplicates)
 - `delete_learned_rule(rule_id)` — removes by rule ID; returns bool
 - `set_rule_enabled(rule_id, enabled)` — toggles without deleting; returns bool
 - `get_conflicts()` — returns list of `{"pattern": str, "rules": [...]}` where the same pattern maps to different categories
@@ -278,13 +278,66 @@ All services use these functions — no hardcoded strings anywhere. This ensures
 
 ---
 
+## ATM allocation workflow
+
+ATM withdrawals (`semantic_type_id = ATM_WITHDRAWAL`) need to be split into sub-categories before they count as resolved spending.
+
+**Storage:** `data/processed/allocations.parquet` via `app/storage/allocations.py`
+
+**Domain model:** `app/domain/allocations.py` — `Allocation(allocation_id, transaction_id, category_id, amount, allocation_note, created_by, created_at)`
+
+**Service:** `app/allocations/services/allocation_service.py`
+- `get_atm_transactions()` — returns ATM withdrawals with `resolution_status != ALLOCATED`
+- `get_existing_allocations(transaction_id)` — returns any already-saved splits
+- `save_transaction_allocations(transaction_id, splits)` — persists splits and marks parent as `ALLOCATED`
+
+**UI page:** `app/frontend/pages/atm_allocation_page.py` — two-panel layout: left lists pending withdrawals, right is a split editor with add/remove rows, live remainder counter (green when zero, red when over), saves to parquet on confirm. Accessible via "ATM Allocations" in the sidebar.
+
+---
+
+## Dashboard (real cashflow visibility)
+
+`app/frontend/pages/home_page.py` powered by `app/cashflow/services/dashboard_service.py`.
+
+**Top metric cards:** current month income, current month spending, total transactions, categorised count + coverage %, pending review count.
+
+**Monthly income vs spending chart:** last 6 months as side-by-side vertical bars (green = income, red = spending). Built natively with Flet containers.
+
+**Category breakdown:** horizontal bar chart for the current month's spending by category (top 12), showing amount and % of total.
+
+**Account balances panel:** always shows all accounts — `account_id`, total income, total spending, net balance (green/red).
+
+**`dashboard_service.py` functions** (all accept optional `account_id` parameter):
+- `get_summary_stats(account_id)` — headline numbers for the metric cards
+- `get_monthly_income_spending(n_months, account_id)` — list of `{"month", "income", "spending"}` dicts
+- `get_category_breakdown_current_month(account_id)` — list of `{"category_id", "total"}` dicts
+
+---
+
+## Multi-account awareness
+
+`app/ui/services/account_service.py` — central account helpers:
+- `get_account_ids()` — sorted list of distinct `account_id` values in `transactions.parquet`
+- `get_account_balances()` — list of `{"account_id", "income", "spending", "balance"}` dicts
+- `filter_by_account(df, account_id)` — filters any DataFrame; pass `ALL_ACCOUNTS = "__all__"` to skip
+- `ALL_ACCOUNTS = "__all__"` — sentinel constant used throughout
+
+**Pages with account filter dropdown:**
+- **Dashboard** — dropdown in top-right; all metric cards, chart, and breakdown update on change
+- **Review Transactions** — account dropdown above the transaction list
+- **Reviewed Transactions** — account dropdown next to the search field
+
+**`transaction_service.py`** extended with:
+- `load_unresolved_transactions_for_account(account_id)`
+- `load_all_transactions_for_account(account_id)`
+
+---
+
 ## What is NOT yet built
 
-- Allocation/splitting engine (ATM withdrawals, cash transactions)
 - Yearly budget generation
 - Spending anomaly detection
 - Packaging as standalone executable (currently needs Python + `flet run flet_app.py`) — path resolution is done, PyInstaller spec is ready; blocked by disk space on build machine
-- Multi-account support in the UI
 
 ---
 
@@ -302,77 +355,26 @@ Data files are created automatically in `data/processed/` on first import.
 
 ## Next steps — suggested priorities
 
-These are listed roughly in order of impact vs. effort. Use this section to brief an AI assistant on what to work on next.
-
-### 1. Packaging for non-coders (highest real-world impact)
-
-Right now the app requires Python and a terminal. The product vision says zero terminal for end users.
-
-What to explore:
-- `pyinstaller` to bundle the app into a `.exe`
-- Flet has a built-in `flet pack` command (wraps PyInstaller) — check if it handles Pandas/PyArrow correctly
-- The data folder needs to live alongside the executable, not inside it
-- Test on a machine without Python installed
-
-Key risk: PyArrow and DuckDB are notoriously difficult to bundle with PyInstaller. Research this first before building anything.
+### 1. Packaging for non-coders — partially done
+Path resolution and PyInstaller spec are ready. Resume by running `pyinstaller "Finance Platform.spec"` after clearing disk space.
 
 ### 2. Schema migration system ✅ DONE
+See the **Schema migration system** section above.
 
-`app/schema/` is fully implemented. See the **Schema migration system** section above for details.
-
-### 3. ATM allocation workflow
-
-`ATM_WITHDRAWAL` transactions have `is_terminal_spending=False` and `resolution_status=MANUAL_REVIEW_REQUIRED` because they need to be split into sub-categories (e.g. "withdrew €200: €80 groceries, €120 leisure"). The data model already has `ALLOCATED` as a status — the workflow just doesn't exist yet.
-
-What to build:
-- A split/allocation UI for ATM transactions in the Review page
-- An `allocations.parquet` store (the domain model `app/domain/allocations.py` already exists)
-- Logic to mark parent transaction as `ALLOCATED` and create child allocation records
+### 3. ATM allocation workflow ✅ DONE
+See the **ATM allocation workflow** section above.
 
 ### 4. Learned rules lifecycle ✅ DONE
+See the **Learned rules lifecycle** section above.
 
-See the **Learned rules lifecycle** section above for full details.
+### 5. Dashboard with real cashflow visibility ✅ DONE
+See the **Dashboard** section above.
 
-### 5. Dashboard with real cashflow visibility
+### 6. Multi-account awareness in the UI ✅ DONE
+See the **Multi-account awareness** section above.
 
-The current Dashboard shows transaction counts. What a user actually needs:
-- Monthly income vs. spending (last 3–6 months)
-- Category breakdown for current month
-- Running balance trend
-- Comparison: this month vs. same month last year
+### 7. Yearly budget planner (next natural step)
+Allow the user to set a monthly spending target per category. Compare actuals vs budget on the dashboard. Store in `data/processed/budget.yaml`. Show over/under indicators on the category breakdown.
 
-All the data is already there. This is mostly a visualisation task. Flet supports basic charting or you can use a Canvas widget.
-
-### 6. Multi-account awareness in the UI
-
-Transactions have `account_id` but the UI never exposes it — everything is shown as a single pool. For a household with 2–3 accounts this matters.
-
-What to add:
-- Account filter on the Review, Forecast, and Dashboard pages
-- Per-account balance tracking
-- Cross-account transfer detection (already partially handled via `INTERNAL_TRANSFER` semantic type)
-
----
-
-## Path resolution (portable across dev and packaged exe)
-
-`app/utils/paths.py` centralises all path resolution:
-
-```python
-def data_path(relative: str) -> Path:
-    """User data files (parquet, yaml rules). Next to exe when packaged."""
-
-def resource_path(relative: str) -> Path:
-    """Bundled read-only resources (YAML rule files). In sys._MEIPASS when packaged."""
-```
-
-All services use these functions — no hardcoded strings anywhere. This ensures the app works both via `flet run flet_app.py` and as a bundled `.exe`.
-
----
-
-## Learned rules lifecycle
-
-`app/category/services/learned_rule_service.py` manages rules written to `data/processed/learned_category_rules.yaml`.
-
-**Functions:**
-- `append_learned_rule(d
+### 8. Spending anomaly detection
+Flag transactions that are unusually large compared to the category's historical average. Surface these on the Review page with a visual indicator.
