@@ -240,4 +240,35 @@ class FinancePlatformApp:
         self,
     ):
 
-        se
+        self.reviewed_recurring_page.load_overrides()
+
+        self.content.content = (
+            self.reviewed_recurring_page
+            .build()
+        )
+
+        self.page.update()
+
+    def show_import(self):
+
+        self.content.content = (
+            self.import_page.build()
+        )
+
+        self.page.update()
+
+    def show_health_check(self):
+
+        self.content.content = (
+            self.health_page.build()
+        )
+
+        self.page.update()
+
+
+def main(page: ft.Page):
+
+    FinancePlatformApp(page)
+
+
+ft.run(main)

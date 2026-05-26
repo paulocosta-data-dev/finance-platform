@@ -82,4 +82,29 @@ learned_
     }
 
     existing_rules = (
-        
+        rules_config["rules"]
+    )
+
+    for rule in existing_rules:
+
+        if (
+            rule["pattern"]
+            == description.lower()
+        ):
+
+            return
+
+    existing_rules.append(
+        new_rule
+    )
+
+    with open(
+        LEARNED_RULES_PATH,
+        "w",
+    ) as file:
+
+        yaml.dump(
+            rules_config,
+            file,
+            sort_keys=False,
+        )

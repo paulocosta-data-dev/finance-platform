@@ -111,4 +111,25 @@ def save_recurring_override(
                 overrides_df,
                 new_row_df,
             ],
-     
+            ignore_index=True,
+        )
+
+    updated_df = (
+        updated_df
+        .drop_duplicates(
+            subset=[
+                "entity_name"
+            ],
+            keep="last",
+        )
+    )
+
+    OVERRIDES_PATH.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    updated_df.to_parquet(
+        OVERRIDES_PATH,
+        index=False,
+    )
