@@ -333,6 +333,38 @@ ATM withdrawals (`semantic_type_id = ATM_WITHDRAWAL`) need to be split into sub-
 
 ---
 
+---
+
+## Budget Planner (automatic)
+
+`app/budget/` — fully automatic budget calculator, no manual input required.
+
+**Algorithm (`app/budget/services/budget_calculator.py`):**
+1. Builds a complete monthly series per category (missing months filled with 0)
+2. Computes `mean_active` (average over months with spend), `frequency` (fraction of months used), `mean_overall = mean_active × frequency`
+3. Detects trend via OLS linear regression on the full monthly series; only positive trends (growing spend) increase the budget
+4. Classifies each category:
+   - `recurring_fixed` — cv < 0.20 and frequency ≥ 0.70 → no buffer (predictable)
+   - `recurring_variable` — cv 0.20–0.50 and frequency ≥ 0.40 → 10% buffer
+   - `occasional` — everything else → 15% buffer
+5. Applies inflation: `budget = (mean_overall + trend_adj) × buffer × (1 + inflation_rate)`, rounded to nearest euro
+6. Excluded from calculation: `uncategorized`, `savings`
+
+**Persistence (`app/budget/services/budget_service.py`):**
+- Results stored in `data/processed/budget.yaml` with inflation rate used and calculation date
+- `recalculate_budgets(inflation_rate)` — reloads transactions, runs calculator, saves
+- `get_budget_vs_actual(account_id)` — joins budgets with current month actuals; returns list sorted over-budget first
+
+**UI page (`app/frontend/pages/budget_page.py`):**
+- Inflation rate input field (default 3%) + "Calculate Budget" button
+- Account filter dropdown
+- Table: category, recommended budget, actual this month, delta, % used (bar), classification badge
+- Over-budget rows highlighted red
+
+**Dashboard widget:** "Budget alerts" panel shows up to 5 over-budget categories; green "all within budget" message when everything is fine; hidden if no budget has been calculated yet.
+
+**Tests:** `tests/test_budget_calculator.py` — 21 unit tests covering all classification cases, trend direction, inflation application, Decimal handling, and edge cases.
+
 ## What is NOT yet built
 
 - Yearly budget generation
@@ -373,8 +405,9 @@ See the **Dashboard** section above.
 ### 6. Multi-account awareness in the UI ✅ DONE
 See the **Multi-account awareness** section above.
 
-### 7. Yearly budget planner (next natural step)
-Allow the user to set a monthly spending target per category. Compare actuals vs budget on the dashboard. Store in `data/processed/budget.yaml`. Show over/under indicators on the category breakdown.
+### 7. Budget Planner ✅ DONE
+
+See the **Budget Planner** section above. Budget is calculated automatically from history — user only sets the inflation rate.
 
 ### 8. Spending anomaly detection
 Flag transactions that are unusually large compared to the category's historical average. Surface these on the Review page with a visual indicator.
