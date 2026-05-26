@@ -31,6 +31,7 @@ def _load() -> pd.DataFrame:
     df["transaction_date"] = pd.to_datetime(
         df["transaction_date"], errors="coerce"
     )
+    df["amount"] = df["amount"].apply(lambda x: float(x) if x is not None else 0.0)
 
     return df
 

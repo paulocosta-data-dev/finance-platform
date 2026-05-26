@@ -5,6 +5,7 @@ from app.cashflow.services.dashboard_service import (
     get_monthly_income_spending,
     get_summary_stats,
 )
+from app.budget.services.budget_service import get_budget_vs_actual, load_budgets
 from app.ui.services.account_service import (
     ALL_ACCOUNTS,
     get_account_balances,
@@ -202,6 +203,48 @@ def _build_account_balances(balances: list[dict]) -> ft.Container:
     )
 
 
+
+def _build_budget_alerts(rows: list[dict]) -> ft.Container | None:
+    """Show over-budget categories. Returns None if budget not configured."""
+    over = [r for r in rows if r["over_budget"]]
+    if not rows:
+        return None  # budget not set up yet — silent
+    if not over:
+        return ft.Container(
+            padding=ft.Padding(left=12, right=12, top=8, bottom=8),
+            border_radius=8,
+            bgcolor=ft.Colors.GREEN_50,
+            content=ft.Text("✓ All categories within budget this month", size=13, color=ft.Colors.GREEN_800),
+        )
+    alert_rows = []
+    for r in over[:5]:
+        alert_rows.append(
+            ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                controls=[
+                    ft.Text(r["category_id"], size=13),
+                    ft.Text(
+                        f"€{r['actual']:.0f} / €{r['budget']:.0f}  (+€{r['delta']:.0f})",
+                        size=12,
+                        color=ft.Colors.RED_700,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                ],
+            )
+        )
+    return ft.Container(
+        padding=16,
+        border_radius=10,
+        bgcolor=ft.Colors.RED_50,
+        width=400,
+        content=ft.Column(
+            spacing=8,
+            controls=[
+                ft.Text("Over budget this month", size=13, weight=ft.FontWeight.BOLD, color=ft.Colors.RED_800),
+            ] + alert_rows,
+        ),
+    )
+
 # ── Stateful dashboard page ───────────────────────────────────────────────────
 
 class DashboardPage:
@@ -230,6 +273,8 @@ class DashboardPage:
         monthly = get_monthly_income_spending(n_months=6, account_id=acc)
         breakdown = get_category_breakdown_current_month(account_id=acc)
         balances = get_account_balances()
+        budget_rows = get_budget_vs_actual(account_id=acc)
+        budget_alerts = _build_budget_alerts(budget_rows)
         month_label = stats.get("current_month_label", "—")
 
         account_dropdown = ft.Dropdown(
@@ -308,7 +353,17 @@ class DashboardPage:
                             _build_account_balances(balances),
                         ],
                     ),
-                ],
+                ] + (
+                    [
+                        ft.Column(
+                            spacing=10,
+                            controls=[
+                                _section_title("Budget alerts"),
+                                budget_alerts,
+                            ],
+                        )
+                    ] if budget_alerts is not None else []
+                ),
             ),
         ]
 

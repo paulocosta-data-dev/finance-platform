@@ -8,6 +8,10 @@ from app.frontend.pages.atm_allocation_page import (
     ATMAllocationPage,
 )
 
+from app.frontend.pages.budget_page import (
+    BudgetPage,
+)
+
 from app.frontend.pages.forecast_page import (
     ForecastPage,
 )
@@ -75,6 +79,7 @@ class FinancePlatformApp:
         self.health_page = HealthPage(page)
         self.learned_rules_page = LearnedRulesPage(page)
         self.atm_allocation_page = ATMAllocationPage(page)
+        self.budget_page = BudgetPage(page)
 
         navigation = ft.Column(
             width=250,
@@ -114,6 +119,10 @@ class FinancePlatformApp:
                     on_click=lambda e: self.show_import(),
                 ),
                 ft.Divider(),
+                ft.Button(
+                    content=ft.Text("Budget Planner"),
+                    on_click=lambda e: self.show_budget(),
+                ),
                 ft.Button(
                     content=ft.Text("ATM Allocations"),
                     on_click=lambda e: self.show_atm_allocations(),
@@ -175,6 +184,11 @@ class FinancePlatformApp:
 
     def show_import(self):
         self.content.content = self.import_page.build()
+        self.page.update()
+
+    def show_budget(self):
+        self.budget_page._load()
+        self.content.content = self.budget_page.build()
         self.page.update()
 
     def show_atm_allocations(self):
