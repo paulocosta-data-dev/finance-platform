@@ -55,6 +55,8 @@ finance-platform/
 │   ├── recurring/               # Recurring override service
 │   ├── overrides/               # Human corrections service
 │   ├── allocations/services/    # ATM allocation service
+│   ├── anomaly/services/        # Spending anomaly detection service
+│   ├── budget/services/         # Budget calculator + budget service
 │   ├── storage/                 # Parquet read/write for transactions, raw, imports, allocations
 │   ├── seeds/                   # Base reference data (categories, semantic types)
 │   ├── schema/                  # Schema versioning + migration runner
@@ -66,7 +68,9 @@ finance-platform/
 │   ├── test_normalizer.py
 │   ├── test_category.py
 │   ├── test_forecasting.py
-│   └── test_recurring.py
+│   ├── test_recurring.py
+│   ├── test_budget_calculator.py
+│   └── test_anomaly.py
 └── data/
     └── processed/               # Parquet/YAML files (created at runtime, not in git)
         ├── transactions.parquet
@@ -75,6 +79,7 @@ finance-platform/
         ├── transaction_overrides.parquet
         ├── recurring_overrides.parquet
         ├── allocations.parquet
+        ├── budget.yaml
         └── learned_category_rules.yaml
 ```
 
@@ -190,7 +195,7 @@ Page patterns:
 - **Function-based**: `def build_X_page() -> ft.Column`
 - **Class-based**: `class XPage: def __init__(self, page): ... def build(self) -> ft.Column`
 
-Current pages: Dashboard, Forecast, Review Transactions, Reviewed Transactions, Recurring Transactions, Reviewed Recurring, Import Bank File, ATM Allocations, Learned Rules, Health Check.
+Current pages: Dashboard, Forecast, Review Transactions, Reviewed Transactions, Recurring Transactions, Reviewed Recurring, Import Bank File, ATM Allocations, Budget Planner, Learned Rules, Health Check.
 
 **Flet 0.85 API notes** (these differ from newer Flet docs):
 - Buttons: `ft.Button(content=ft.Text("label"), on_click=handler)` — NOT `ft.ElevatedButton(text=...)`
@@ -203,7 +208,7 @@ Current pages: Dashboard, Forecast, Review Transactions, Reviewed Transactions, 
 
 ## Test suite
 
-44 unit tests in `tests/`, using Python's built-in `unittest`.
+78 unit tests in `tests/`, using Python's built-in `unittest`.
 Run from inside the app via the **Health Check** page — no terminal needed.
 
 | File | What it tests |
@@ -212,6 +217,8 @@ Run from inside the app via the **Health Check** page — no terminal needed.
 | `test_category.py` | `category_rule_matches` — all condition combinations |
 | `test_forecasting.py` | `forecast_fixed_recurring_amount`, `forecast_behavioral_amount` |
 | `test_recurring.py` | `detect_recurring_transactions` — mocked parquet and overrides |
+| `test_budget_calculator.py` | Budget classification, trend, inflation, Decimal handling (21 tests) |
+| `test_anomaly.py` | `build_category_stats`, `flag_anomalies` — thresholds, credits, edge cases (17 tests) |
 
 `tests/helpers.py` — `make_transaction(...)` builds a valid `Transaction` with sensible defaults.
 
@@ -312,6 +319,8 @@ ATM withdrawals (`semantic_type_id = ATM_WITHDRAWAL`) need to be split into sub-
 - `get_monthly_income_spending(n_months, account_id)` — list of `{"month", "income", "spending"}` dicts
 - `get_category_breakdown_current_month(account_id)` — list of `{"category_id", "total"}` dicts
 
+**Important:** amounts in parquet are stored as `Decimal`. Dashboard service casts with `df["amount"].apply(lambda x: float(x) if x is not None else 0.0)` at load time to avoid pandas numeric errors.
+
 ---
 
 ## Multi-account awareness
@@ -330,8 +339,6 @@ ATM withdrawals (`semantic_type_id = ATM_WITHDRAWAL`) need to be split into sub-
 **`transaction_service.py`** extended with:
 - `load_unresolved_transactions_for_account(account_id)`
 - `load_all_transactions_for_account(account_id)`
-
----
 
 ---
 
@@ -365,10 +372,35 @@ ATM withdrawals (`semantic_type_id = ATM_WITHDRAWAL`) need to be split into sub-
 
 **Tests:** `tests/test_budget_calculator.py` — 21 unit tests covering all classification cases, trend direction, inflation application, Decimal handling, and edge cases.
 
+---
+
+## Spending Anomaly Detection
+
+`app/anomaly/services/anomaly_service.py` — pure functions, no side effects.
+
+**Algorithm:**
+- `build_category_stats(df) -> dict[str, dict]` — scans full transaction history, computes mean and std of `abs(amount)` per category for DEBIT transactions only. Only returns stats for categories with at least `MIN_HISTORY_COUNT = 5` samples. Returns `{category_id: {"mean": float, "std": float, "count": int}}`.
+- `flag_anomalies(df, category_stats) -> pd.DataFrame` — adds two columns to a transactions DataFrame:
+  - `is_anomaly` (bool)
+  - `anomaly_severity` (None | "medium" | "high")
+  - Thresholds: `mean + 2×std` → "medium"; `mean + 3×std` → "high"
+  - Never flags: CREDIT transactions, categories with no stats, categories where std == 0
+
+**Integration in Review page (`app/frontend/pages/review_page.py`):**
+- On each `load_transactions()` call, reads full `transactions.parquet` to build category stats
+- Calls `flag_anomalies()` on the unresolved transaction DataFrame
+- `ReviewRow._build_anomaly_badge()` renders inline:
+  - Orange badge ("! Unusual amount") for medium severity
+  - Red badge ("!! Very unusual") for high severity
+  - Empty placeholder container when no anomaly
+
+**Tests:** `tests/test_anomaly.py` — 17 unit tests, all passing.
+
+---
+
 ## What is NOT yet built
 
 - Yearly budget generation
-- Spending anomaly detection
 - Packaging as standalone executable (currently needs Python + `flet run flet_app.py`) — path resolution is done, PyInstaller spec is ready; blocked by disk space on build machine
 
 ---
@@ -406,8 +438,7 @@ See the **Dashboard** section above.
 See the **Multi-account awareness** section above.
 
 ### 7. Budget Planner ✅ DONE
+See the **Budget Planner** section above.
 
-See the **Budget Planner** section above. Budget is calculated automatically from history — user only sets the inflation rate.
-
-### 8. Spending anomaly detection
-Flag transactions that are unusually large compared to the category's historical average. Surface these on the Review page with a visual indicator.
+### 8. Spending anomaly detection ✅ DONE
+See the **Spending Anomaly Detection** section above. Anomalous transactions are flagged inline on the Review Transactions page with colour-coded severity badges.
