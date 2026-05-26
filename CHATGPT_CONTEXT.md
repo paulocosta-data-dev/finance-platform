@@ -345,4 +345,34 @@ All the data is already there. This is mostly a visualisation task. Flet support
 
 ### 6. Multi-account awareness in the UI
 
-Transactions have `account_id` but
+Transactions have `account_id` but the UI never exposes it — everything is shown as a single pool. For a household with 2–3 accounts this matters.
+
+What to add:
+- Account filter on the Review, Forecast, and Dashboard pages
+- Per-account balance tracking
+- Cross-account transfer detection (already partially handled via `INTERNAL_TRANSFER` semantic type)
+
+---
+
+## Path resolution (portable across dev and packaged exe)
+
+`app/utils/paths.py` centralises all path resolution:
+
+```python
+def data_path(relative: str) -> Path:
+    """User data files (parquet, yaml rules). Next to exe when packaged."""
+
+def resource_path(relative: str) -> Path:
+    """Bundled read-only resources (YAML rule files). In sys._MEIPASS when packaged."""
+```
+
+All services use these functions — no hardcoded strings anywhere. This ensures the app works both via `flet run flet_app.py` and as a bundled `.exe`.
+
+---
+
+## Learned rules lifecycle
+
+`app/category/services/learned_rule_service.py` manages rules written to `data/processed/learned_category_rules.yaml`.
+
+**Functions:**
+- `append_learned_rule(d
