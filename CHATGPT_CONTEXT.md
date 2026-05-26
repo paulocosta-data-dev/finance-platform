@@ -224,4 +224,125 @@ Run from inside the app via the **Health Check** page — no terminal needed.
 - `migrations.py` — migration functions + `MIGRATIONS` registry: `dict[dataset_key → list[(from_v, to_v, fn)]]`
 - `migration_runner.py` — `run_pending_migrations()` reads each parquet file, detects its version via `df["schema_version"].min()`, and applies any pending steps in order
 
-**How it runs:** `flet_app.py` calls `run_pending_migrations()` at the very start of `FinancePlatformApp.__init__
+**How it runs:** `flet_app.py` calls `run_pending_migrations()` at the very start of `FinancePlatformApp.__init__()`, before any page is instantiated.
+
+**How to add a new migration:**
+1. Bump the relevant constant in `versions.py` (e.g. `CURRENT_TRANSACTION_SCHEMA_VERSION = 2`)
+2. Add a function `_transactions_v1_to_v2(df) -> df` in `migrations.py`
+3. Append `(1, 2, _transactions_v1_to_v2)` to `MIGRATIONS["transactions"]`
+
+Never modify existing migration entries — only append.
+
+---
+
+## Path resolution (portable across dev and packaged exe)
+
+`app/utils/paths.py` centralises all path resolution:
+
+```python
+def data_path(relative: str) -> Path:
+    """User data files (parquet, yaml rules). Next to exe when packaged."""
+    ...
+
+def resource_path(relative: str) -> Path:
+    """Bundled read-only resources (YAML rule files). In sys._MEIPASS when packaged."""
+    ...
+```
+
+All services use these functions — no hardcoded strings anywhere. This ensures the app works both via `flet run flet_app.py` and as a bundled `.exe`.
+
+---
+
+## Learned rules lifecycle
+
+`app/category/services/learned_rule_service.py` manages rules written to `data/processed/learned_category_rules.yaml`.
+
+**Functions:**
+- `append_learned_rule(description, category_id)` — adds or updates a rule; same pattern → updates in-place (no duplicates)
+- `delete_learned_rule(rule_id)` — removes by rule ID; returns bool
+- `set_rule_enabled(rule_id, enabled)` — toggles without deleting; returns bool
+- `get_conflicts()` — returns list of `{"pattern": str, "rules": [...]}` where the same pattern maps to different categories
+- `load_learned_rules()` — returns full YAML dict; creates the file if missing
+
+**UI page:** `app/frontend/pages/learned_rules_page.py` — table with enable/disable toggle and delete per row; orange conflict banner at top when contradictions are detected. Accessible via "Learned Rules" in the sidebar.
+
+**Rule schema in YAML:**
+```yaml
+- rule_id: learned_continente
+  match_type: contains
+  pattern: continente
+  category_id: groceries
+  confidence: 0.99
+  enabled: true
+```
+
+---
+
+## What is NOT yet built
+
+- Allocation/splitting engine (ATM withdrawals, cash transactions)
+- Yearly budget generation
+- Spending anomaly detection
+- Packaging as standalone executable (currently needs Python + `flet run flet_app.py`) — path resolution is done, PyInstaller spec is ready; blocked by disk space on build machine
+- Multi-account support in the UI
+
+---
+
+## How to run
+
+```bash
+pip install -r requirements.txt
+flet run flet_app.py
+```
+
+Or double-click `start.bat` on Windows.
+Data files are created automatically in `data/processed/` on first import.
+
+---
+
+## Next steps — suggested priorities
+
+These are listed roughly in order of impact vs. effort. Use this section to brief an AI assistant on what to work on next.
+
+### 1. Packaging for non-coders (highest real-world impact)
+
+Right now the app requires Python and a terminal. The product vision says zero terminal for end users.
+
+What to explore:
+- `pyinstaller` to bundle the app into a `.exe`
+- Flet has a built-in `flet pack` command (wraps PyInstaller) — check if it handles Pandas/PyArrow correctly
+- The data folder needs to live alongside the executable, not inside it
+- Test on a machine without Python installed
+
+Key risk: PyArrow and DuckDB are notoriously difficult to bundle with PyInstaller. Research this first before building anything.
+
+### 2. Schema migration system ✅ DONE
+
+`app/schema/` is fully implemented. See the **Schema migration system** section above for details.
+
+### 3. ATM allocation workflow
+
+`ATM_WITHDRAWAL` transactions have `is_terminal_spending=False` and `resolution_status=MANUAL_REVIEW_REQUIRED` because they need to be split into sub-categories (e.g. "withdrew €200: €80 groceries, €120 leisure"). The data model already has `ALLOCATED` as a status — the workflow just doesn't exist yet.
+
+What to build:
+- A split/allocation UI for ATM transactions in the Review page
+- An `allocations.parquet` store (the domain model `app/domain/allocations.py` already exists)
+- Logic to mark parent transaction as `ALLOCATED` and create child allocation records
+
+### 4. Learned rules lifecycle ✅ DONE
+
+See the **Learned rules lifecycle** section above for full details.
+
+### 5. Dashboard with real cashflow visibility
+
+The current Dashboard shows transaction counts. What a user actually needs:
+- Monthly income vs. spending (last 3–6 months)
+- Category breakdown for current month
+- Running balance trend
+- Comparison: this month vs. same month last year
+
+All the data is already there. This is mostly a visualisation task. Flet supports basic charting or you can use a Canvas widget.
+
+### 6. Multi-account awareness in the UI
+
+Transactions have `account_id` but

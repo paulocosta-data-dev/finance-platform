@@ -4,6 +4,10 @@ from app.schema.migration_runner import (
     run_pending_migrations,
 )
 
+from app.frontend.pages.atm_allocation_page import (
+    ATMAllocationPage,
+)
+
 from app.frontend.pages.forecast_page import (
     ForecastPage,
 )
@@ -52,14 +56,9 @@ class FinancePlatformApp:
 
         run_pending_migrations()
 
-        self.page.title = (
-            "Finance Platform"
-        )
-
+        self.page.title = "Finance Platform"
         self.page.window_width = 1600
-
         self.page.window_height = 900
-
         self.page.padding = 0
 
         self.content = ft.Container(
@@ -67,39 +66,15 @@ class FinancePlatformApp:
             padding=20,
         )
 
-        self.review_page = (
-            ReviewPage(page)
-        )
-
-        self.reviewed_page = (
-            ReviewedPage(page)
-        )
-
-        self.import_page = (
-            ImportPage(page)
-        )
-
-        self.recurring_page = (
-            RecurringPage(page)
-        )
-
-        self.reviewed_recurring_page = (
-            ReviewedRecurringPage(
-                page
-            )
-        )
-
-        self.forecast_page = (
-            ForecastPage(page)
-        )
-
-        self.health_page = (
-            HealthPage(page)
-        )
-
-        self.learned_rules_page = (
-            LearnedRulesPage(page)
-        )
+        self.review_page = ReviewPage(page)
+        self.reviewed_page = ReviewedPage(page)
+        self.import_page = ImportPage(page)
+        self.recurring_page = RecurringPage(page)
+        self.reviewed_recurring_page = ReviewedRecurringPage(page)
+        self.forecast_page = ForecastPage(page)
+        self.health_page = HealthPage(page)
+        self.learned_rules_page = LearnedRulesPage(page)
+        self.atm_allocation_page = ATMAllocationPage(page)
 
         navigation = ft.Column(
             width=250,
@@ -107,86 +82,49 @@ class FinancePlatformApp:
                 ft.Text(
                     "Finance Platform",
                     size=28,
-                    weight=(
-                        ft.FontWeight.BOLD
-                    ),
+                    weight=ft.FontWeight.BOLD,
                 ),
                 ft.Divider(),
                 ft.Button(
-                    content=ft.Text(
-                        "Dashboard"
-                    ),
-                    on_click=lambda e:
-                    self.show_dashboard(),
+                    content=ft.Text("Dashboard"),
+                    on_click=lambda e: self.show_dashboard(),
                 ),
                 ft.Button(
-                    content=ft.Text(
-                        "Forecast"
-                    ),
-                    on_click=lambda e:
-                    self.show_forecast(),
+                    content=ft.Text("Forecast"),
+                    on_click=lambda e: self.show_forecast(),
                 ),
                 ft.Button(
-                    content=ft.Text(
-                        (
-                            "Review "
-                            "Transactions"
-                        )
-                    ),
-                    on_click=lambda e:
-                    self.show_review(),
+                    content=ft.Text("Review Transactions"),
+                    on_click=lambda e: self.show_review(),
                 ),
                 ft.Button(
-                    content=ft.Text(
-                        (
-                            "Reviewed "
-                            "Transactions"
-                        )
-                    ),
-                    on_click=lambda e:
-                    self.show_reviewed(),
+                    content=ft.Text("Reviewed Transactions"),
+                    on_click=lambda e: self.show_reviewed(),
                 ),
                 ft.Button(
-                    content=ft.Text(
-                        (
-                            "Recurring "
-                            "Transactions"
-                        )
-                    ),
-                    on_click=lambda e:
-                    self.show_recurring(),
+                    content=ft.Text("Recurring Transactions"),
+                    on_click=lambda e: self.show_recurring(),
                 ),
                 ft.Button(
-                    content=ft.Text(
-                        (
-                            "Reviewed "
-                            "Recurring"
-                        )
-                    ),
-                    on_click=lambda e:
-                    self.show_reviewed_recurring(),
+                    content=ft.Text("Reviewed Recurring"),
+                    on_click=lambda e: self.show_reviewed_recurring(),
                 ),
                 ft.Button(
-                    content=ft.Text(
-                        "Import Bank File"
-                    ),
-                    on_click=lambda e:
-                    self.show_import(),
+                    content=ft.Text("Import Bank File"),
+                    on_click=lambda e: self.show_import(),
                 ),
                 ft.Divider(),
                 ft.Button(
-                    content=ft.Text(
-                        "Learned Rules"
-                    ),
-                    on_click=lambda e:
-                    self.show_learned_rules(),
+                    content=ft.Text("ATM Allocations"),
+                    on_click=lambda e: self.show_atm_allocations(),
                 ),
                 ft.Button(
-                    content=ft.Text(
-                        "Health Check"
-                    ),
-                    on_click=lambda e:
-                    self.show_health_check(),
+                    content=ft.Text("Learned Rules"),
+                    on_click=lambda e: self.show_learned_rules(),
+                ),
+                ft.Button(
+                    content=ft.Text("Health Check"),
+                    on_click=lambda e: self.show_health_check(),
                 ),
             ],
         )
@@ -197,9 +135,7 @@ class FinancePlatformApp:
                 ft.Container(
                     width=280,
                     padding=20,
-                    bgcolor=(
-                        ft.Colors.BLUE_50
-                    ),
+                    bgcolor=ft.Colors.BLUE_50,
                     content=navigation,
                 ),
                 self.content,
@@ -207,29 +143,57 @@ class FinancePlatformApp:
         )
 
         self.page.add(layout)
-
         self.show_dashboard()
 
     def show_dashboard(self):
-
-        self.content.content = (
-            build_home_page()
-        )
-
+        self.content.content = build_home_page()
         self.page.update()
 
     def show_forecast(self):
-
-        self.content.content = (
-            self.forecast_page
-            .build()
-        )
-
+        self.content.content = self.forecast_page.build()
         self.page.update()
 
     def show_review(self):
-
         self.review_page.load_transactions()
+        self.content.content = self.review_page.build()
+        self.page.update()
 
-        self.content.content = (
-            self.review_page.
+    def show_reviewed(self):
+        self.reviewed_page.load_transactions()
+        self.content.content = self.reviewed_page.build()
+        self.page.update()
+
+    def show_recurring(self):
+        self.recurring_page.load_recurring()
+        self.content.content = self.recurring_page.build()
+        self.page.update()
+
+    def show_reviewed_recurring(self):
+        self.reviewed_recurring_page.load_overrides()
+        self.content.content = self.reviewed_recurring_page.build()
+        self.page.update()
+
+    def show_import(self):
+        self.content.content = self.import_page.build()
+        self.page.update()
+
+    def show_atm_allocations(self):
+        self.atm_allocation_page._load_atm_list()
+        self.content.content = self.atm_allocation_page.build()
+        self.page.update()
+
+    def show_learned_rules(self):
+        self.learned_rules_page._load()
+        self.content.content = self.learned_rules_page.build()
+        self.page.update()
+
+    def show_health_check(self):
+        self.content.content = self.health_page.build()
+        self.page.update()
+
+
+def main(page: ft.Page):
+    FinancePlatformApp(page)
+
+
+ft.run(main)
