@@ -9,6 +9,11 @@ from app.ui.services.review_service import (
     save_corrections,
 )
 
+from app.anomaly.services.anomaly_service import (
+    build_category_stats,
+    flag_anomalies,
+)
+
 from app.ui.services.account_service import (
     ALL_ACCOUNTS,
     get_account_ids,
@@ -72,6 +77,43 @@ class ReviewRow:
             )
         )
 
+        self.is_anomaly = bool(
+            row.get("is_anomaly", False)
+        )
+        self.anomaly_severity = row.get(
+            "anomaly_severity", None
+        )
+
+    def _build_anomaly_badge(self):
+        if not self.is_anomaly:
+            return ft.Container(width=140)
+
+        if self.anomaly_severity == "high":
+            label = "!! Very unusual"
+            bg = ft.Colors.RED_100
+            fg = ft.Colors.RED_900
+        else:
+            label = "! Unusual amount"
+            bg = ft.Colors.ORANGE_100
+            fg = ft.Colors.ORANGE_900
+
+        return ft.Container(
+            width=140,
+            bgcolor=bg,
+            border_radius=4,
+            padding=ft.Padding(
+                left=6,
+                right=6,
+                top=3,
+                bottom=3,
+            ),
+            content=ft.Text(
+                label,
+                size=11,
+                color=fg,
+            ),
+        )
+
     def build(self):
 
         return ft.Row(
@@ -119,6 +161,7 @@ class ReviewRow:
                     ),
                     width=140,
                 ),
+                self._build_anomaly_badge(),
                 ft.Container(
                     content=ft.Text(
                         self.current_category
@@ -208,6 +251,7 @@ class ReviewPage:
         )
 
         self._selected_account = ALL_ACCOUNTS
+        self._category_stats = {}
 
         self._account_dropdown = ft.Dropdown(
             value=ALL_ACCOUNTS,
@@ -290,20 +334,31 @@ class ReviewPage:
         self.rows_column.controls.clear()
 
         from app.ui.services.account_service import filter_by_account
+        from app.utils.paths import data_path
+        import pandas as pd
+
+        # Build category stats from full transaction history for anomaly detection
+        txn_path = data_path("data/processed/transactions.parquet")
+        if txn_path.exists():
+            full_df = pd.read_parquet(txn_path)
+            self._category_stats = build_category_stats(full_df)
+        else:
+            self._category_stats = {}
+
         unresolved_df = filter_by_account(
             load_unresolved_transactions(),
             self._selected_account,
         )
+
+        if not unresolved_df.empty and self._category_stats:
+            unresolved_df = flag_anomalies(unresolved_df, self._category_stats)
 
         unresolved_count = len(
             unresolved_df
         )
 
         self.status_text.value = (
-            f"""
-Pending review:
-{unresolved_count}
-"""
+            f"Pending review: {unresolved_count}"
         )
 
         self.review_rows = []
