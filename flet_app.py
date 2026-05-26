@@ -12,6 +12,10 @@ from app.frontend.pages.health_page import (
     HealthPage,
 )
 
+from app.frontend.pages.learned_rules_page import (
+    LearnedRulesPage,
+)
+
 from app.frontend.pages.home_page import (
     build_home_page,
 )
@@ -93,6 +97,10 @@ class FinancePlatformApp:
             HealthPage(page)
         )
 
+        self.learned_rules_page = (
+            LearnedRulesPage(page)
+        )
+
         navigation = ft.Column(
             width=250,
             controls=[
@@ -168,6 +176,13 @@ class FinancePlatformApp:
                 ft.Divider(),
                 ft.Button(
                     content=ft.Text(
+                        "Learned Rules"
+                    ),
+                    on_click=lambda e:
+                    self.show_learned_rules(),
+                ),
+                ft.Button(
+                    content=ft.Text(
                         "Health Check"
                     ),
                     on_click=lambda e:
@@ -217,24 +232,4 @@ class FinancePlatformApp:
         self.review_page.load_transactions()
 
         self.content.content = (
-            self.review_page.build()
-        )
-
-        self.page.update()
-
-    def show_reviewed(self):
-
-        self.reviewed_page.load_transactions()
-
-        self.content.content = (
-            self.reviewed_page.build()
-        )
-
-        self.page.update()
-
-    def show_recurring(self):
-
-        self.recurring_page.load_recurring()
-
-        self.content.content = (
-            self.recurring_page.build()
+            self.review_page.
