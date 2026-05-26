@@ -1,245 +1,242 @@
-from app.utils.paths import data_path
-import pandas as pd
 import flet as ft
 
-from app.category.services.recurring_detection_service import (
-    detect_recurring_transactions,
+from app.cashflow.services.dashboard_service import (
+    get_category_breakdown_current_month,
+    get_monthly_income_spending,
+    get_summary_stats,
 )
 
 
-TRANSACTIONS_PATH = data_path(
-    "data/processed/transactions.parquet"
-)
+# ── Helpers ──────────────────────────────────────────────────────────────────
 
+def _metric_card(title: str, value: str, color=None) -> ft.Container:
 
-def load_transactions():
-
-    if not TRANSACTIONS_PATH.exists():
-        return pd.DataFrame()
-    return pd.read_parquet(
-        TRANSACTIONS_PATH
+    return ft.Container(
+        width=220,
+        padding=16,
+        border_radius=10,
+        bgcolor=color or ft.Colors.BLUE_50,
+        content=ft.Column(
+            spacing=6,
+            controls=[
+                ft.Text(title, size=12, color=ft.Colors.GREY_700),
+                ft.Text(value, size=26, weight=ft.FontWeight.BOLD),
+            ],
+        ),
     )
 
 
-def build_metric_card(
-    title,
-    value,
-):
+def _section_title(text: str) -> ft.Text:
+    return ft.Text(text, size=18, weight=ft.FontWeight.BOLD)
+
+
+def _bar(value: float, max_value: float, color, height: float = 120) -> ft.Container:
+    """Vertical bar proportional to value/max_value."""
+
+    pct = (value / max_value) if max_value > 0 else 0
+    bar_height = max(4, round(pct * height))
 
     return ft.Container(
-        width=260,
-        padding=20,
-        border_radius=12,
-        bgcolor=ft.Colors.BLUE_50,
+        width=28,
+        height=height,
         content=ft.Column(
-            spacing=10,
+            spacing=0,
+            alignment=ft.MainAxisAlignment.END,
             controls=[
-                ft.Text(
-                    title,
-                    size=14,
-                    color=(
-                        ft.Colors.GREY_700
-                    ),
-                ),
-                ft.Text(
-                    str(value),
-                    size=30,
-                    weight=(
-                        ft.FontWeight.BOLD
-                    ),
+                ft.Container(
+                    width=28,
+                    height=bar_height,
+                    bgcolor=color,
+                    border_radius=ft.BorderRadius(top_left=4, top_right=4, bottom_left=0, bottom_right=0),
                 ),
             ],
         ),
     )
 
 
-def build_home_page():
+# ── Monthly income/spending chart ────────────────────────────────────────────
 
-    df = load_transactions()
+def _build_monthly_chart(monthly: list[dict]) -> ft.Container:
 
-    total_transactions = len(df)
+    if not monthly:
+        return ft.Container(
+            content=ft.Text("No transaction data yet.", color=ft.Colors.GREY_500),
+        )
 
-    categorized_transactions = len(
-        df[
-            df["category_id"]
-            != "uncategorized"
-        ]
-    )
+    max_val = max(
+        max(m["income"], m["spending"]) for m in monthly
+    ) or 1.0
 
-    uncategorized_transactions = (
-        total_transactions
-        - categorized_transactions
-    )
+    chart_cols = []
 
-    categorization_coverage = round(
-        (
-            categorized_transactions
-            / max(
-                total_transactions,
-                1,
+    for m in monthly:
+        label = m["month"][-5:]  # "MM-YY" style — show "YYYY-MM" last 5 chars
+
+        income_bar = _bar(m["income"], max_val, ft.Colors.GREEN_400)
+        spending_bar = _bar(m["spending"], max_val, ft.Colors.RED_300)
+
+        chart_cols.append(
+            ft.Column(
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=4,
+                controls=[
+                    ft.Row(
+                        spacing=4,
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        controls=[income_bar, spending_bar],
+                    ),
+                    ft.Text(label, size=10, color=ft.Colors.GREY_600),
+                ],
             )
         )
-        * 100,
-        1,
+
+    legend = ft.Row(
+        spacing=16,
+        controls=[
+            ft.Row(spacing=4, controls=[
+                ft.Container(width=12, height=12, bgcolor=ft.Colors.GREEN_400, border_radius=2),
+                ft.Text("Income", size=11, color=ft.Colors.GREY_700),
+            ]),
+            ft.Row(spacing=4, controls=[
+                ft.Container(width=12, height=12, bgcolor=ft.Colors.RED_300, border_radius=2),
+                ft.Text("Spending", size=11, color=ft.Colors.GREY_700),
+            ]),
+        ],
     )
 
-    distinct_entities = len(
-        df[
-            "entity_name"
-        ]
-        .dropna()
-        .unique()
-    )
-
-    recurring_entities = len(
-        detect_recurring_transactions()
-    )
-
-    total_spending = round(
-        abs(
-            df[
-                df["amount"]
-                < 0
-            ]["amount"]
-            .sum()
-        ),
-        2,
-    )
-
-    top_entities = (
-        df[
-            df["entity_name"]
-            .notna()
-        ]
-        .groupby(
-            "entity_name"
-        )
-        .size()
-        .sort_values(
-            ascending=False
-        )
-        .head(10)
-    )
-
-    top_entities_rows = []
-
-    for (
-        entity_name,
-        count,
-    ) in top_entities.items():
-
-        top_entities_rows.append(
-            ft.Row(
-                alignment=(
-                    ft.MainAxisAlignment
-                    .SPACE_BETWEEN
+    return ft.Container(
+        padding=16,
+        border_radius=10,
+        bgcolor=ft.Colors.BLUE_50,
+        content=ft.Column(
+            spacing=12,
+            controls=[
+                legend,
+                ft.Row(
+                    spacing=16,
+                    alignment=ft.MainAxisAlignment.START,
+                    controls=chart_cols,
                 ),
+            ],
+        ),
+    )
+
+
+# ── Category breakdown ───────────────────────────────────────────────────────
+
+def _build_category_breakdown(breakdown: list[dict]) -> ft.Container:
+
+    if not breakdown:
+        return ft.Container(
+            content=ft.Text("No spending data for current month.", color=ft.Colors.GREY_500),
+        )
+
+    total = sum(r["total"] for r in breakdown) or 1.0
+    top = breakdown[:12]
+
+    rows = []
+
+    for item in top:
+        pct = round(item["total"] / total * 100, 1)
+        bar_width = max(4, round(pct * 2.5))  # scale: 100% → 250px
+
+        rows.append(
+            ft.Column(
+                spacing=2,
                 controls=[
-                    ft.Text(
-                        entity_name,
-                        size=16,
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        controls=[
+                            ft.Text(item["category_id"], size=13),
+                            ft.Text(f"€{item['total']:.0f}  ({pct}%)", size=12, color=ft.Colors.GREY_600),
+                        ],
                     ),
-                    ft.Text(
-                        str(count),
-                        size=16,
-                        weight=(
-                            ft.FontWeight.BOLD
-                        ),
+                    ft.Container(
+                        height=6,
+                        width=bar_width,
+                        bgcolor=ft.Colors.BLUE_400,
+                        border_radius=3,
                     ),
                 ],
             )
         )
+
+    return ft.Container(
+        padding=16,
+        border_radius=10,
+        bgcolor=ft.Colors.BLUE_50,
+        width=360,
+        content=ft.Column(spacing=10, controls=rows),
+    )
+
+
+# ── Page builder ─────────────────────────────────────────────────────────────
+
+def build_home_page() -> ft.Column:
+
+    stats = get_summary_stats()
+    monthly = get_monthly_income_spending(n_months=6)
+    breakdown = get_category_breakdown_current_month()
+
+    month_label = stats.get("current_month_label", "—")
+
+    top_cards = ft.Row(
+        wrap=True,
+        spacing=16,
+        run_spacing=16,
+        controls=[
+            _metric_card(
+                f"Income  {month_label}",
+                f"€{stats.get('current_month_income', 0):.0f}",
+                ft.Colors.GREEN_50,
+            ),
+            _metric_card(
+                f"Spending  {month_label}",
+                f"€{stats.get('current_month_spending', 0):.0f}",
+                ft.Colors.RED_50,
+            ),
+            _metric_card(
+                "Total Transactions",
+                str(stats.get("total_transactions", 0)),
+            ),
+            _metric_card(
+                "Categorized",
+                f"{stats.get('categorized', 0)}  ({stats.get('coverage_pct', 0)}%)",
+            ),
+            _metric_card(
+                "Pending Review",
+                str(stats.get("uncategorized", 0)),
+                ft.Colors.ORANGE_50,
+            ),
+        ],
+    )
 
     return ft.Column(
         expand=True,
         scroll=ft.ScrollMode.AUTO,
         controls=[
-            ft.Text(
-                "Dashboard",
-                size=34,
-                weight=(
-                    ft.FontWeight.BOLD
-                ),
-            ),
+            ft.Text("Dashboard", size=34, weight=ft.FontWeight.BOLD),
+            top_cards,
+            ft.Divider(),
             ft.Row(
+                spacing=30,
                 wrap=True,
-                spacing=20,
-                run_spacing=20,
                 controls=[
-                    build_metric_card(
-                        (
-                            "Total "
-                            "Transactions"
-                        ),
-                        total_transactions,
+                    ft.Column(
+                        spacing=10,
+                        controls=[
+                            _section_title("Income vs Spending — last 6 months"),
+                            _build_monthly_chart(monthly),
+                        ],
                     ),
-                    build_metric_card(
-                        (
-                            "Categorized "
-                            "Transactions"
-                        ),
-                        categorized_transactions,
-                    ),
-                    build_metric_card(
-                        (
-                            "Uncategorized "
-                            "Transactions"
-                        ),
-                        uncategorized_transactions,
-                    ),
-                    build_metric_card(
-                        (
-                            "Coverage"
-                        ),
-                        (
-                            f"{categorization_coverage}%"
-                        ),
-                    ),
-                    build_metric_card(
-                        (
-                            "Distinct "
-                            "Entities"
-                        ),
-                        distinct_entities,
-                    ),
-                    build_metric_card(
-                        (
-                            "Recurring "
-                            "Entities"
-                        ),
-                        recurring_entities,
-                    ),
-                    build_metric_card(
-                        (
-                            "Total "
-                            "Spending"
-                        ),
-                        (
-                            f"{total_spending:.2f} EUR"
-                        ),
+                    ft.Column(
+                        spacing=10,
+                        controls=[
+                            _section_title(f"Category breakdown — {month_label}"),
+                            _build_category_breakdown(breakdown),
+                        ],
                     ),
                 ],
-            ),
-            ft.Divider(),
-            ft.Text(
-                "Top Financial Entities",
-                size=24,
-                weight=(
-                    ft.FontWeight.BOLD
-                ),
-            ),
-            ft.Container(
-                padding=20,
-                border_radius=12,
-                bgcolor=(
-                    ft.Colors.BLUE_50
-                ),
-                content=ft.Column(
-                    spacing=15,
-                    controls=(
-                        top_entities_rows
-                    ),
-                ),
             ),
         ],
     )
