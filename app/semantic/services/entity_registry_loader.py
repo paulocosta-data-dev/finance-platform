@@ -1,19 +1,15 @@
-from pathlib import Path
-
+from app.utils.paths import resource_path
 import yaml
 
 
-ENTITY_REGISTRY_PATH = (
-    "app/semantic/entities/"
-    "entity_registry.yaml"
+ENTITY_REGISTRY_PATH = resource_path(
+    "app/semantic/entities/entity_registry.yaml"
 )
 
 
 def load_entity_registry():
 
-    path = Path(
-        ENTITY_REGISTRY_PATH
-    )
+    path = ENTITY_REGISTRY_PATH
 
     if not path.exists():
 

@@ -1,3 +1,4 @@
+from app.utils.paths import data_path
 import flet as ft
 import pandas as pd
 
@@ -10,7 +11,7 @@ from app.ui.services.review_service import (
 )
 
 
-TRANSACTIONS_PATH = (
+TRANSACTIONS_PATH = data_path(
     "data/processed/transactions.parquet"
 )
 
@@ -91,6 +92,8 @@ class ReviewedPage:
 
         self.rows_column.controls.clear()
 
+        if not TRANSACTIONS_PATH.exists():
+            return
         df = pd.read_parquet(
             TRANSACTIONS_PATH
         )
@@ -272,10 +275,10 @@ class ReviewedPage:
             }
         }
 
-        unresolved_df = (
-            pd.read_parquet(
-                TRANSACTIONS_PATH
-            )
+        if not TRANSACTIONS_PATH.exists():
+            return
+        unresolved_df = pd.read_parquet(
+            TRANSACTIONS_PATH
         )
 
         save_corrections(

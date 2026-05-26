@@ -1,5 +1,4 @@
-from pathlib import Path
-
+from app.utils.paths import resource_path
 import yaml
 
 from app.semantic.models.semantic_rule import (
@@ -7,9 +6,8 @@ from app.semantic.models.semantic_rule import (
 )
 
 
-RULES_PATH = Path(
-    "app/semantic/rules/"
-    "semantic_rules.yaml"
+RULES_PATH = resource_path(
+    "app/semantic/rules/semantic_rules.yaml"
 )
 
 

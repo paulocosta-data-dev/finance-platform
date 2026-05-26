@@ -1,19 +1,15 @@
-from pathlib import Path
-
+from app.utils.paths import resource_path
 import yaml
 
 
-FORECAST_GROUPS_PATH = (
-    "app/cashflow/config/"
-    "forecast_groups.yaml"
+FORECAST_GROUPS_PATH = resource_path(
+    "app/cashflow/config/forecast_groups.yaml"
 )
 
 
 def load_forecast_groups():
 
-    path = Path(
-        FORECAST_GROUPS_PATH
-    )
+    path = FORECAST_GROUPS_PATH
 
     if not path.exists():
 

@@ -1,5 +1,4 @@
-from pathlib import Path
-
+from app.utils.paths import resource_path
 import yaml
 
 from app.category.models.category_rule import (
@@ -7,9 +6,8 @@ from app.category.models.category_rule import (
 )
 
 
-RULES_PATH = Path(
-    "app/category/rules/"
-    "category_rules.yaml"
+RULES_PATH = resource_path(
+    "app/category/rules/category_rules.yaml"
 )
 
 

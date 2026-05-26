@@ -1,4 +1,4 @@
-from pathlib import Path
+from app.utils.paths import data_path
 
 import pandas as pd
 
@@ -11,11 +11,8 @@ from app.overrides.services.override_service import (
 )
 
 
-TRANSACTIONS_PATH = (
-    Path(
-        "data/processed/"
-        "transactions.parquet"
-    )
+TRANSACTIONS_PATH = data_path(
+    "data/processed/transactions.parquet"
 )
 
 

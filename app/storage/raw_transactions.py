@@ -1,4 +1,4 @@
-from pathlib import Path
+from app.utils.paths import data_path
 
 import pandas as pd
 
@@ -7,11 +7,8 @@ from app.domain.imports import (
 )
 
 
-RAW_TRANSACTIONS_PATH = (
-    Path(
-        "data/processed/"
-        "raw_transactions.parquet"
-    )
+RAW_TRANSACTIONS_PATH = data_path(
+    "data/processed/raw_transactions.parquet"
 )
 
 

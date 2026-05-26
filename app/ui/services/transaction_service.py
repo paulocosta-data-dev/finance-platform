@@ -1,15 +1,17 @@
+from app.utils.paths import data_path
 import pandas as pd
 
 
-TRANSACTIONS_PATH = (
-    "data/processed/"
-    "transactions.parquet"
+TRANSACTIONS_PATH = data_path(
+    "data/processed/transactions.parquet"
 )
 
 
 def load_unresolved_transactions(
 ) -> pd.DataFrame:
 
+    if not TRANSACTIONS_PATH.exists():
+        return pd.DataFrame()
     df = pd.read_parquet(
         TRANSACTIONS_PATH
     )

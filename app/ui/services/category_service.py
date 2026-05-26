@@ -1,11 +1,9 @@
+from app.utils.paths import data_path
 import yaml
-from pathlib import Path
 
 
-CATEGORIES_PATH = (
-    Path(
-        "config/categories.yaml"
-    )
+CATEGORIES_PATH = data_path(
+    "config/categories.yaml"
 )
 
 

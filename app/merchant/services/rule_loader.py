@@ -1,5 +1,4 @@
-from pathlib import Path
-
+from app.utils.paths import resource_path
 import yaml
 
 from app.merchant.models.merchant_rule import (
@@ -7,9 +6,8 @@ from app.merchant.models.merchant_rule import (
 )
 
 
-RULES_PATH = Path(
-    "app/merchant/rules/"
-    "merchant_rules.yaml"
+RULES_PATH = resource_path(
+    "app/merchant/rules/merchant_rules.yaml"
 )
 
 

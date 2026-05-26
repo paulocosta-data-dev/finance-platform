@@ -1,12 +1,12 @@
-from pathlib import Path
+from app.utils.paths import data_path
 
 import pandas as pd
 
 from app.domain.imports import ImportFile
 
 
-IMPORTS_PATH = (
-    Path("data/processed/imports.parquet")
+IMPORTS_PATH = data_path(
+    "data/processed/imports.parquet"
 )
 
 

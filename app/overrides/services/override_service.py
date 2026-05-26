@@ -1,20 +1,16 @@
-from pathlib import Path
-
+from app.utils.paths import data_path
 import pandas as pd
 
 
-OVERRIDES_PATH = (
-    "data/processed/"
-    "transaction_overrides.parquet"
+OVERRIDES_PATH = data_path(
+    "data/processed/transaction_overrides.parquet"
 )
 
 
 def load_overrides_df(
 ) -> pd.DataFrame:
 
-    overrides_path = Path(
-        OVERRIDES_PATH
-    )
+    overrides_path = OVERRIDES_PATH
 
     if not overrides_path.exists():
 
@@ -27,7 +23,7 @@ def load_overrides_df(
         )
 
     return pd.read_parquet(
-        OVERRIDES_PATH
+        str(OVERRIDES_PATH)
     )
 
 

@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from app.utils.paths import data_path
 import pandas as pd
 
 from app.cashflow.services.forecast_group_registry_service import (
@@ -11,13 +12,15 @@ from app.recurring.services.recurring_override_service import (
 )
 
 
-TRANSACTIONS_PATH = (
+TRANSACTIONS_PATH = data_path(
     "data/processed/transactions.parquet"
 )
 
 
 def build_last_complete_month_baseline():
 
+    if not TRANSACTIONS_PATH.exists():
+        return {}
     transactions_df = pd.read_parquet(
         TRANSACTIONS_PATH
     )

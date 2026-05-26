@@ -1,11 +1,9 @@
-from pathlib import Path
-
+from app.utils.paths import data_path
 import yaml
 
 
-LEARNED_RULES_PATH = Path(
-    "data/processed/"
-    "learned_category_rules.yaml"
+LEARNED_RULES_PATH = data_path(
+    "data/processed/learned_category_rules.yaml"
 )
 
 
@@ -82,29 +80,4 @@ learned_
     }
 
     existing_rules = (
-        rules_config["rules"]
-    )
-
-    for rule in existing_rules:
-
-        if (
-            rule["pattern"]
-            == description.lower()
-        ):
-
-            return
-
-    existing_rules.append(
-        new_rule
-    )
-
-    with open(
-        LEARNED_RULES_PATH,
-        "w",
-    ) as file:
-
-        yaml.dump(
-            rules_config,
-            file,
-            sort_keys=False,
-        )
+        

@@ -1,6 +1,8 @@
 from datetime import datetime
 from pathlib import Path
 
+from app.utils.paths import data_path
+
 from app.domain.imports import (
     ImportFile,
 )
@@ -27,11 +29,8 @@ from app.utils.file_hash import (
 )
 
 
-RAW_TRANSACTIONS_PATH = (
-    Path(
-        "data/processed/"
-        "raw_transactions.parquet"
-    )
+RAW_TRANSACTIONS_PATH = data_path(
+    "data/processed/raw_transactions.parquet"
 )
 
 
@@ -50,7 +49,7 @@ def run_ingestion_pipeline(
     loader = IngestionLoader()
 
     files = loader.discover_files(
-        "data/raw"
+        str(data_path("data/raw"))
     )
 
     total_raw_transactions = 0

@@ -1,8 +1,7 @@
 from datetime import datetime
 from pathlib import Path
-import subprocess
-import sys
 
+from app.utils.paths import data_path
 import pandas as pd
 
 from app.category.services.learned_rule_service import (
@@ -10,23 +9,20 @@ from app.category.services.learned_rule_service import (
 )
 
 
-OVERRIDES_PATH = (
-    "data/processed/"
-    "transaction_overrides.parquet"
+OVERRIDES_PATH = data_path(
+    "data/processed/transaction_overrides.parquet"
 )
 
 
 def load_or_create_overrides_df(
 ) -> pd.DataFrame:
 
-    overrides_path = Path(
-        OVERRIDES_PATH
-    )
+    overrides_path = OVERRIDES_PATH
 
     if overrides_path.exists():
 
         return pd.read_parquet(
-            OVERRIDES_PATH
+            str(OVERRIDES_PATH)
         )
 
     overrides_path.parent.mkdir(
@@ -205,15 +201,11 @@ def save_corrections(
     )
 
     updated_overrides_df.to_parquet(
-        OVERRIDES_PATH,
+        str(OVERRIDES_PATH),
         index=False,
     )
 
-    subprocess.run(
-        [
-            sys.executable,
-            "run_normalization_pipeline.py",
-            "--rebuild-silver",
-        ],
-        check=True,
+    from app.pipelines.normalization_pipeline import (
+        run_normalization_pipeline,
     )
+    run_normalization_pipeline(rebuild_silver=True)

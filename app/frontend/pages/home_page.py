@@ -1,3 +1,4 @@
+from app.utils.paths import data_path
 import pandas as pd
 import flet as ft
 
@@ -6,13 +7,15 @@ from app.category.services.recurring_detection_service import (
 )
 
 
-TRANSACTIONS_PATH = (
+TRANSACTIONS_PATH = data_path(
     "data/processed/transactions.parquet"
 )
 
 
 def load_transactions():
 
+    if not TRANSACTIONS_PATH.exists():
+        return pd.DataFrame()
     return pd.read_parquet(
         TRANSACTIONS_PATH
     )

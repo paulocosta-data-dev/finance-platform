@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from app.utils.paths import data_path
 import pandas as pd
 
 from app.recurring.services.recurring_override_service import (
@@ -7,7 +8,7 @@ from app.recurring.services.recurring_override_service import (
 )
 
 
-TRANSACTIONS_PATH = (
+TRANSACTIONS_PATH = data_path(
     "data/processed/transactions.parquet"
 )
 
@@ -23,6 +24,8 @@ EXCLUDED_ENTITIES = {
 
 def load_transactions() -> pd.DataFrame:
 
+    if not TRANSACTIONS_PATH.exists():
+        return pd.DataFrame()
     return pd.read_parquet(
         TRANSACTIONS_PATH
     )

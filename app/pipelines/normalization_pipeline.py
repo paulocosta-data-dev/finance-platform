@@ -1,3 +1,4 @@
+from app.utils.paths import data_path
 import pandas as pd
 
 from app.domain.imports import (
@@ -11,7 +12,7 @@ from app.storage.transactions import (
 )
 
 
-RAW_TRANSACTIONS_PATH = (
+RAW_TRANSACTIONS_PATH = data_path(
     "data/processed/raw_transactions.parquet"
 )
 
@@ -57,6 +58,8 @@ def run_normalization_pipeline(
     rebuild_silver: bool = False,
 ):
 
+    if not RAW_TRANSACTIONS_PATH.exists():
+        return
     raw_df = pd.read_parquet(
         RAW_TRANSACTIONS_PATH
     )
