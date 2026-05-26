@@ -9,6 +9,11 @@ from app.ui.services.review_service import (
     save_corrections,
 )
 
+from app.ui.services.account_service import (
+    ALL_ACCOUNTS,
+    get_account_ids,
+)
+
 from app.ui.services.transaction_service import (
     load_unresolved_transactions,
 )
@@ -202,6 +207,15 @@ class ReviewPage:
             load_available_categories()
         )
 
+        self._selected_account = ALL_ACCOUNTS
+
+        self._account_dropdown = ft.Dropdown(
+            value=ALL_ACCOUNTS,
+            options=self._account_options(),
+            width=200,
+            on_change=self._on_account_change,
+        )
+
         self.review_rows = []
 
         self.rows_column = (
@@ -246,6 +260,13 @@ class ReviewPage:
                         ft.FontWeight.BOLD
                     ),
                 ),
+                ft.Row(
+                    spacing=10,
+                    controls=[
+                        ft.Text("Account:", size=13, color=ft.Colors.GREY_700),
+                        self._account_dropdown,
+                    ],
+                ),
                 self.status_text,
                 apply_button,
                 ft.Divider(),
@@ -253,12 +274,25 @@ class ReviewPage:
             ],
         )
 
+    def _account_options(self):
+        opts = [ft.dropdown.Option(ALL_ACCOUNTS, "All Accounts")]
+        for acc in get_account_ids():
+            opts.append(ft.dropdown.Option(acc))
+        return opts
+
+    def _on_account_change(self, e):
+        self._selected_account = e.control.value or ALL_ACCOUNTS
+        self.load_transactions()
+        self.page.update()
+
     def load_transactions(self):
 
         self.rows_column.controls.clear()
 
-        unresolved_df = (
-            load_unresolved_transactions()
+        from app.ui.services.account_service import filter_by_account
+        unresolved_df = filter_by_account(
+            load_unresolved_transactions(),
+            self._selected_account,
         )
 
         unresolved_count = len(
@@ -300,8 +334,10 @@ Pending review:
 
         corrections = {}
 
-        unresolved_df = (
-            load_unresolved_transactions()
+        from app.ui.services.account_service import filter_by_account
+        unresolved_df = filter_by_account(
+            load_unresolved_transactions(),
+            self._selected_account,
         )
 
         for review_row in self.review_rows:

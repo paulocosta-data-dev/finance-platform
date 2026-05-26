@@ -1,10 +1,16 @@
 """
 Provides the data that powers the Dashboard page.
-All computations are done directly on transactions.parquet
-without requiring recurring overrides or forecast groups.
+All computations are done directly on transactions.parquet.
+Pass account_id=None (or ALL_ACCOUNTS) to include all accounts.
 """
 
 from app.utils.paths import data_path
+from app.ui.services.account_service import (
+    ALL_ACCOUNTS,
+    filter_by_account,
+    get_account_balances,
+    get_account_ids,
+)
 import pandas as pd
 
 TRANSACTIONS_PATH = data_path(
@@ -29,11 +35,13 @@ def _load() -> pd.DataFrame:
     return df
 
 
-def get_monthly_income_spending(n_months: int = 6) -> list[dict]:
+def get_monthly_income_spending(
+    n_months: int = 6,
+    account_id: str = ALL_ACCOUNTS,
+) -> list[dict]:
     """Return last n_months of monthly income and spending.
 
     Each dict: {"month": "2024-11", "income": 3200.0, "spending": 1850.0}
-    Ordered oldest → newest.
     """
 
     df = _load()
@@ -41,8 +49,12 @@ def get_monthly_income_spending(n_months: int = 6) -> list[dict]:
     if df.empty:
         return []
 
-    df["month"] = df["transaction_date"].dt.to_period("M")
+    df = filter_by_account(df, account_id)
 
+    if df.empty:
+        return []
+
+    df["month"] = df["transaction_date"].dt.to_period("M")
     all_months = sorted(df["month"].dropna().unique())
     recent_months = all_months[-n_months:]
 
@@ -61,14 +73,17 @@ def get_monthly_income_spending(n_months: int = 6) -> list[dict]:
     return result
 
 
-def get_category_breakdown_current_month() -> list[dict]:
-    """Return spending by category for the current (most recent) month.
-
-    Each dict: {"category_id": str, "total": float}
-    Ordered by total descending.
-    """
+def get_category_breakdown_current_month(
+    account_id: str = ALL_ACCOUNTS,
+) -> list[dict]:
+    """Return spending by category for the current (most recent) month."""
 
     df = _load()
+
+    if df.empty:
+        return []
+
+    df = filter_by_account(df, account_id)
 
     if df.empty:
         return []
@@ -99,21 +114,30 @@ def get_category_breakdown_current_month() -> list[dict]:
     ]
 
 
-def get_summary_stats() -> dict:
-    """Quick headline numbers for the top metric cards."""
+def get_summary_stats(
+    account_id: str = ALL_ACCOUNTS,
+) -> dict:
+    """Headline numbers for the top metric cards."""
 
     df = _load()
 
+    empty = {
+        "total_transactions": 0,
+        "categorized": 0,
+        "uncategorized": 0,
+        "coverage_pct": 0.0,
+        "current_month_income": 0.0,
+        "current_month_spending": 0.0,
+        "current_month_label": "—",
+    }
+
     if df.empty:
-        return {
-            "total_transactions": 0,
-            "categorized": 0,
-            "uncategorized": 0,
-            "coverage_pct": 0.0,
-            "total_spending": 0.0,
-            "total_income": 0.0,
-            "current_month_label": "—",
-        }
+        return empty
+
+    df = filter_by_account(df, account_id)
+
+    if df.empty:
+        return empty
 
     total = len(df)
     categorized = int((df["category_id"] != "uncategorized").sum())

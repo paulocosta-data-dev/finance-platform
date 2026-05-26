@@ -146,7 +146,7 @@ class FinancePlatformApp:
         self.show_dashboard()
 
     def show_dashboard(self):
-        self.content.content = build_home_page()
+        self.content.content = build_home_page(page=self.page)
         self.page.update()
 
     def show_forecast(self):

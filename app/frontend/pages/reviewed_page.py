@@ -2,6 +2,12 @@ from app.utils.paths import data_path
 import flet as ft
 import pandas as pd
 
+from app.ui.services.account_service import (
+    ALL_ACCOUNTS,
+    filter_by_account,
+    get_account_ids,
+)
+
 from app.ui.services.category_service import (
     load_available_categories,
 )
@@ -27,6 +33,15 @@ class ReviewedPage:
 
         self.available_categories = (
             load_available_categories()
+        )
+
+        self._selected_account = ALL_ACCOUNTS
+
+        self._account_dropdown = ft.Dropdown(
+            value=ALL_ACCOUNTS,
+            options=self._account_options(),
+            width=200,
+            on_change=self._on_account_change,
         )
 
         self.search_field = (
@@ -88,6 +103,17 @@ class ReviewedPage:
 
         self.page.update()
 
+    def _account_options(self):
+        opts = [ft.dropdown.Option(ALL_ACCOUNTS, "All Accounts")]
+        for acc in get_account_ids():
+            opts.append(ft.dropdown.Option(acc))
+        return opts
+
+    def _on_account_change(self, e):
+        self._selected_account = e.control.value or ALL_ACCOUNTS
+        self.load_transactions()
+        self.page.update()
+
     def load_transactions(self):
 
         self.rows_column.controls.clear()
@@ -98,10 +124,10 @@ class ReviewedPage:
             TRANSACTIONS_PATH
         )
 
-        reviewed_df = df[
-            df["category_id"]
-            != "uncategorized"
-        ].copy()
+        reviewed_df = filter_by_account(
+            df[df["category_id"] != "uncategorized"].copy(),
+            self._selected_account,
+        )
 
         search_value = (
             self.search_field.value
