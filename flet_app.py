@@ -1,5 +1,9 @@
 import flet as ft
 
+from app.schema.migration_runner import (
+    run_pending_migrations,
+)
+
 from app.frontend.pages.forecast_page import (
     ForecastPage,
 )
@@ -41,6 +45,8 @@ class FinancePlatformApp:
     ):
 
         self.page = page
+
+        run_pending_migrations()
 
         self.page.title = (
             "Finance Platform"
@@ -231,13 +237,4 @@ class FinancePlatformApp:
         self.recurring_page.load_recurring()
 
         self.content.content = (
-            self.recurring_page.build()
-        )
-
-        self.page.update()
-
-    def show_reviewed_recurring(
-        self,
-    ):
-
-        se
+            self.recurring_page.build()
